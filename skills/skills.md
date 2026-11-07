@@ -13,4 +13,5 @@
 - [0011] Centering/scaling 2D keypoints by mask-weighted centroid/spread (keeping position via frame features) gave -0.5 mm on Dev: rejected; internal normalization adds no conditioning gain.
 - [0012] Replacing velocity MSE with Euclidean loss on the implied clean pose gave +0.0 mm: directly matching the eval metric doesn't beat velocity-space training.
 - [0013] Dropout inside each residual block didn't reduce pose overfitting (dev +3.6 mm, rejected); no gain despite unchanged interface/params—avoid intra-block dropout for this regularization.
+- [0015] Lesson: tune_optimizer at LR 6e-4 (between 3e-4 and unstable 1e-3) gave no gain, -0.5 mm dev, rejected—don't retry intermediate LR under same budget.
 ## Open hypotheses
