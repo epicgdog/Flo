@@ -5,4 +5,5 @@
 - [0003] Increasing to width 640 with 5 blocks to stay under 5M params gave +1.8mm dev error with no gain — rejected; blind capacity adds overfit risk.
 - [0004] Lesson: Zeroing invisible 2D joints to block occluded noise while keeping mask signal gave no gain (+0.8mm dev) — rejected.
 - [0005] Visibility-weighted velocity loss gave no gain (-0.2mm): occluded joints add little noise, visible joints already dominate.
+- [0006] Lesson: AdamW weight decay to curb pose overfitting gave no gain, dev +2.6 mm — rejected; avoid weight decay for this.
 ## Open hypotheses
