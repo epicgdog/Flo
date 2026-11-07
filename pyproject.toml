@@ -1,0 +1,18 @@
+[project]
+name = "flo"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "djitellopy>=2.5.0",
+    "matplotlib>=3.11.2",
+    "numpy>=2.4.6",
+    "openai>=3.46.0",
+    "opencv-python>=5.0.0.93",
+    "pandas>=3.1.1",
+    "plotly>=7.1.0",
+    "pytest>=9.2.0",
+    "pyyaml>=6.0.3",
+    "requests>=2.34.2",
+    "streamlit>=1.67.0",
+    "torch>=2.15.0",
+]

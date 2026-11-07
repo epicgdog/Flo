@@ -1,0 +1,81 @@
+paths:
+  raw_train_json: data/raw/2Dto3D_train.json
+  raw_test_json: data/raw/task1_test_3d.npz   # set to the downloaded test file's name
+  train: data/train.npz
+  dev: data/dev_eval.npz
+  heldout: data/heldout_eval.npz
+  candidate: candidate/train.py
+  skills: skills/skills.md
+  history: history
+  state: runs/state.json
+  events: runs/events.jsonl
+  sim_log: runs/sim.jsonl
+  sim_frame: runs/sim_frame.jpg
+data:                      # camera geometry matches a DJI Tello
+  joints: 17
+  train_poses: 72000
+  views_per_pose: 4
+  eval_samples: 2000
+  elev_train_deg: [5, 25]
+  elev_heldout_deg: [25, 40]
+  dist_m: [3, 15]
+  focal_px: [650, 720]      # Tello: 82.6 deg diagonal FOV at 960x720 ~= 683 px
+  sensor_px: [960, 720]
+  aim_jitter_m: 0.3
+  noise_px_base: 1.0
+  noise_px_per_m: 0.15
+  drop_p: 0.10
+  drop_p_extremities: 0.20
+  seeds: {train: 0, dev: 1, heldout: 2}
+train:
+  time_budget_s: 180
+  kill_after_s: 195
+  max_params: 5000000
+sample:
+  k_hypotheses: 10
+  euler_steps: 10
+  batch: 500
+  noise_seed: 1234
+score:
+  bone_err_free: 0.15
+  bone_err_weight: 50
+  implausible_bone_err: 0.30
+  max_joint_dist_m: 2.0
+gate:
+  sigma_dev: null          # filled by calibrate.py
+  sigma_heldout: null      # filled by calibrate.py
+  dev_margin_sigmas: 2
+  heldout_margin_sigmas: 1
+meta:
+  base_url: https://api.meta.ai/v1
+  coder_model: muse-spark-1.3
+  lesson_model: muse-spark-1.3
+  coder_effort: medium
+  lesson_effort: minimal
+  max_output_tokens: 8000
+  timeout_s: 180
+snap:
+  base_url: SET_ME
+  model: SET_ME
+  timeout_s: 10
+  enabled: false           # no SUBQ_API_KEY yet; all decisions use fallbacks
+loop:
+  hours: 3
+  candidates_per_iter: 4
+  recent_attempts_in_prompt: 8
+  snap_audit_every: 5
+  early_stop_check_s: 30
+  early_stop_min_s: 60
+  strategies: [tune_optimizer, timestep_sampling, architecture, conditioning, loss_and_target, regularization, fix_last_failure]
+sim:
+  person_yaw_deg: [0, 360]
+  pose_change_every_frames: 30
+  camera_pitch_down_deg: 10
+  focal_px: 683
+  sensor_px: [960, 720]
+  noise_px: 2.0
+  height_limit_cm: [30, 1000]
+  orbit_radius_m: [3, 6, 9]
+  orbit_heights_cm: [150, 300, 500]
+  orbit_steps: 8
+  fps: 10
