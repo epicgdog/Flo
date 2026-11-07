@@ -51,8 +51,8 @@ gate:
   heldout_margin_sigmas: 1
 meta:
   base_url: https://api.meta.ai/v1
-  coder_model: muse-spark-1.3
-  lesson_model: muse-spark-1.3
+  coder_model: muse-wonder-1.0
+  lesson_model: muse-wonder-1.0
   coder_effort: medium
   lesson_effort: minimal
   max_output_tokens: 8000
