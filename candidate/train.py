@@ -87,7 +87,7 @@ def main():
     model = Net().to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"params: {n_params}", flush=True)
-    opt = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.0)
+    opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.0)
 
     # Stop a little before the budget so saving fits inside it.
     margin = min(5.0, 0.1 * args.time_budget)
