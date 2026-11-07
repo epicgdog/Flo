@@ -45,8 +45,8 @@ score:
   implausible_bone_err: 0.30
   max_joint_dist_m: 2.0
 gate:
-  sigma_dev: 0.5219          # filled by calibrate.py
-  sigma_heldout: 0.9108      # filled by calibrate.py
+  sigma_dev: 0.7073          # filled by calibrate.py
+  sigma_heldout: 1.7430      # filled by calibrate.py
   dev_margin_sigmas: 2
   heldout_margin_sigmas: 1
 meta:
