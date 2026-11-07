@@ -2,4 +2,5 @@
 - [0001] Raising AdamW LR to 3e-4 accelerates convergence within fixed budget, cutting dev error by 2.9 mm.
 - [0002] Use logit-normal timestep sampling to focus training on intermediate timesteps where velocity is hardest — cut dev error by 2.0 mm.
 ## Failed ideas (do not retry without a new reason)
+- [0004] Zeroing occluded 2D joints with mask to block dummy leakage into conditioner gave no gain (-0.4mm) — reject.
 ## Open hypotheses
