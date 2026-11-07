@@ -8,4 +8,5 @@
 - [0006] Lesson: AdamW weight decay to curb pose overfitting gave no gain, dev +2.6 mm — rejected; avoid weight decay for this.
 - [0008] Raising AdamW to 1e-3 for this LayerNorm MLP gave only +1.9 mm dev gain in the fixed budget (rejected: no_gain), yielding no useful faster convergence.
 - [0009] Narrowing the logit-normal to concentrate on hard mid-range timesteps for velocity prediction gave no gain (+1.9 mm worse), so keep broader timestep sampling.
+- [0010] Lesson: Per-joint tokens with self-attention for skeleton structure/joint dependencies gave no gain vs a flat pose vector, worsening dev error by +12.0 mm; avoid this architecture.
 ## Open hypotheses
