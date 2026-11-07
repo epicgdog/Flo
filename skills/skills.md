@@ -10,4 +10,5 @@
 - [0009] Narrowing the logit-normal to concentrate on hard mid-range timesteps for velocity prediction gave no gain (+1.9 mm worse), so keep broader timestep sampling.
 - [0010] Lesson: Per-joint tokens with self-attention for skeleton structure/joint dependencies gave no gain vs a flat pose vector, worsening dev error by +12.0 mm; avoid this architecture.
 - [0011] Centering/scaling 2D keypoints by mask-weighted centroid/spread (keeping position via frame features) gave -0.5 mm on Dev: rejected; internal normalization adds no conditioning gain.
+- [0012] Replacing velocity MSE with Euclidean loss on the implied clean pose gave +0.0 mm: directly matching the eval metric doesn't beat velocity-space training.
 ## Open hypotheses
