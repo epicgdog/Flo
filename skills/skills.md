@@ -1,4 +1,5 @@
 ## Confirmed (passed held-out)
 - [0001] Raising AdamW learning rate for faster convergence within fixed time budget succeeded (dev -2.8 mm).
+- [0002] Sample t from logit-normal to focus on hard intermediate timesteps; dev error -2.7 mm — use for velocity training.
 ## Failed ideas (do not retry without a new reason)
 ## Open hypotheses
