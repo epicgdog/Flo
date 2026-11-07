@@ -78,7 +78,8 @@ def main():
     d = np.load(args.data)
     kp = d["kp2d"].reshape(-1, 34)
     mk = d["mask"].reshape(-1, 17)
-    C_np = np.concatenate([kp, mk], axis=1).astype(np.float32)          # (N,51) condition
+    kp_gated = kp * np.repeat(mk, 2, axis=1).astype(np.float32)
+    C_np = np.concatenate([kp_gated, mk], axis=1).astype(np.float32)          # (N,51) condition
     X1_np = d["pose3d"].reshape(-1, 51).astype(np.float32)              # (N,51) target pose
     N = X1_np.shape[0]
     C = torch.from_numpy(C_np).to(device)
