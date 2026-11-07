@@ -106,7 +106,7 @@ def main():
         x1 = X1[idx]
         c = C[idx]
         x0 = torch.randn_like(x1)
-        t = torch.rand(x1.shape[0], device=device)
+        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))
         xt = (1 - t[:, None]) * x0 + t[:, None] * x1
         target = x1 - x0
         v = model(xt, t, c)
