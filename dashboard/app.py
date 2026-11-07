@@ -18,7 +18,7 @@ import streamlit as st
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from checker.datagen import BONES, project  # noqa: E402
+from checker.datagen import BONES, camera_extrinsics, project  # noqa: E402
 from checker.metrics import mpjpe_mm  # noqa: E402
 from harness import config as C  # noqa: E402
 
@@ -343,15 +343,6 @@ def tagged_models():
             if o.get("accepted") and o.get("tag") and os.path.exists(hfile(o["iter_id"], "model/model.pt"))}
 
 
-def cam_rotation(az_deg, el_deg):
-    """World->camera rotation used by datagen.project (aim jitter ignored): rows right, down, forward."""
-    az, el = math.radians(az_deg), math.radians(el_deg)
-    fwd = -np.array([math.cos(el) * math.cos(az), math.cos(el) * math.sin(az), math.sin(el)])
-    right = np.cross(fwd, [0.0, 0.0, 1.0])
-    right /= np.linalg.norm(right)
-    return np.stack([right, np.cross(fwd, right), fwd])
-
-
 def skel_traces(p, name, color, width, opacity=1.0, legend=True):
     xs, ys, zs = [], [], []
     for a, b in BONES:
@@ -373,15 +364,17 @@ def viewer_tab():
     which = c1.radio("Eval set", ["dev", "heldout"], horizontal=True)
     d = np.load(C.abspath(P[which]))
     idx = c2.number_input("Sample index", 0, int(len(d["pose3d"])) - 1, 0)
-    elev = c3.slider("Elevation (deg)", 30, 85, 45)
-    az, _, dist, focal = d["cam"][idx]
-    world = d["pose3d"][idx].astype(np.float64) @ cam_rotation(az, d["cam"][idx][1])   # camera -> world, z-up
-    rng = np.random.default_rng(0)
-    view = project(world[None], np.array([[az, elev, dist, focal]], dtype=np.float32), rng, CFG)
+    elev = c3.slider("Elevation (deg)", -5, 60, 10)
+    cam = d["cam"][idx].astype(np.float64)
+    R, _ = camera_extrinsics(cam[None])
+    world = d["pose3d"][idx].astype(np.float64) @ R[0]                     # camera -> world, z-up
+    # Re-project at the chosen elevation with the camera aimed at the person (pitch = elevation, no yaw/roll).
+    new_cam = np.array([[cam[0], elev, cam[2], cam[3], 0.0, elev, 0.0]], dtype=np.float32)
+    view = project(world[None], new_cam, np.random.default_rng(0), CFG)
     gt = view["pose3d"][0].astype(np.float64)
     fig = go.Figure([skel_traces(gt, "ground truth", GREY, 8)])
     for tag, color in (("v0", RED), (latest, GREEN)):
-        hyps = predict(load_lifter_model(models[tag]), view["kp2d"], view["mask"], CFG)[0]
+        hyps = predict(load_lifter_model(models[tag]), view["kp2d"], view["mask"], view["frame"], CFG)[0]
         pred = hyps.mean(axis=0)
         st.write(f"**{tag}** MPJPE at {elev}°: {mpjpe_mm(pred[None], gt[None]):.1f} mm")
         fig.add_trace(skel_traces(pred, f"{tag} prediction", color, 5))

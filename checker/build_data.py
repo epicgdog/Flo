@@ -91,8 +91,12 @@ def main(config_path: str = "config.yaml") -> None:
     }
     os.makedirs(os.path.dirname(C.abspath(p["train"])), exist_ok=True)
     for rel, arrays in splits.items():
+        trunc = arrays.pop("truncated_frac")
         save_npz_deterministic(C.abspath(rel), arrays)
         print(f"{rel}: " + ", ".join(f"{k} {tuple(v.shape)}" for k, v in arrays.items()))
+        vis = arrays["mask"].sum(axis=1)
+        print(f"  truncated (some joint outside the frame): {trunc:.1%}; visible joints mean {vis.mean():.1f}, "
+              f"min {int(vis.min())}; |frame offset| mean {np.abs(arrays['frame'][:, :2]).mean():.3f}")
 
     allp = np.concatenate([train_all, test_all])
     sw = np.linalg.norm(allp[:, 5] - allp[:, 6], axis=1)

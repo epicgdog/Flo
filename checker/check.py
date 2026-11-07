@@ -122,10 +122,12 @@ def load_model(model_dir: str):
     return model, sum(p.numel() for p in model.parameters())
 
 
-def predict(model, kp2d: np.ndarray, mask: np.ndarray, cfg: dict) -> np.ndarray:
-    """kp2d (N,17,2), mask (N,17) -> hypotheses (N,K,17,3), batches of sample.batch, seed sample.noise_seed."""
+def predict(model, kp2d: np.ndarray, mask: np.ndarray, frame: np.ndarray, cfg: dict) -> np.ndarray:
+    """kp2d (N,17,2), mask (N,17), frame (N,3) -> hypotheses (N,K,17,3), batches of sample.batch,
+    seed sample.noise_seed. Condition = [kp2d (34), mask (17), frame (3)] = 54 values."""
     s = cfg["sample"]
-    cond = torch.from_numpy(np.concatenate([kp2d.reshape(-1, 34), mask.reshape(-1, 17)], axis=1).astype(np.float32))
+    cond = torch.from_numpy(np.concatenate([kp2d.reshape(-1, 34), mask.reshape(-1, 17), frame.reshape(-1, 3)],
+                                           axis=1).astype(np.float32))
     N = cond.shape[0]
     out = np.zeros((N, s["k_hypotheses"], 17, 3), dtype=np.float64)
     with torch.no_grad():
@@ -150,7 +152,7 @@ def evaluate(out_dir: str, eval_npz: str, cfg: dict) -> dict:
     d = np.load(eval_npz)
     gt = d["pose3d"].astype(np.float64)
     try:
-        hyps = predict(model, d["kp2d"], d["mask"], cfg)
+        hyps = predict(model, d["kp2d"], d["mask"], d["frame"], cfg)
     except Exception as e:
         return {**res, "status": "nan", "error": f"sampling failed: {e!r}"}
     if not np.all(np.isfinite(hyps)):

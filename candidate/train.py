@@ -40,7 +40,7 @@ class Block(nn.Module):
 class Net(nn.Module):
     def __init__(self, width=512, blocks=3):
         super().__init__()
-        self.inp = nn.Linear(51 + 51 + 64, width)
+        self.inp = nn.Linear(51 + 54 + 64, width)
         self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])
         self.out = nn.Linear(width, 51)
 
@@ -78,7 +78,8 @@ def main():
     d = np.load(args.data)
     kp = d["kp2d"].reshape(-1, 34)
     mk = d["mask"].reshape(-1, 17)
-    C_np = np.concatenate([kp, mk], axis=1).astype(np.float32)          # (N,51) condition
+    fr = d["frame"].reshape(-1, 3)                                     # person position and size in the image
+    C_np = np.concatenate([kp, mk, fr], axis=1).astype(np.float32)      # (N,54) condition
     X1_np = d["pose3d"].reshape(-1, 51).astype(np.float32)              # (N,51) target pose
     N = X1_np.shape[0]
     C = torch.from_numpy(C_np).to(device)
@@ -87,7 +88,7 @@ def main():
     model = Net().to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"params: {n_params}", flush=True)
-    opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.0)
+    opt = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.0)
 
     # Stop a little before the budget so saving fits inside it.
     margin = min(5.0, 0.1 * args.time_budget)
@@ -105,7 +106,7 @@ def main():
         x1 = X1[idx]
         c = C[idx]
         x0 = torch.randn_like(x1)
-        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))
+        t = torch.rand(x1.shape[0], device=device)
         xt = (1 - t[:, None]) * x0 + t[:, None] * x1
         target = x1 - x0
         v = model(xt, t, c)

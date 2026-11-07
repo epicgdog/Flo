@@ -13,8 +13,8 @@ from harness import config as C
 from harness import history
 
 SYSTEM = """You improve a PyTorch training script for conditional flow matching.
-The model maps 2D body keypoints (17 joints, normalized) seen from a drone
-to a 3D pose (17 joints, meters, camera frame, root-relative).
+The model maps 2D body keypoints (17 joints, normalized, plus the person's
+position and size in the image) seen from a drone to a 3D pose (17 joints, meters, camera frame, root-relative).
 Lower 3D error on unseen data is better.
 Rules:
 - Keep the command-line interface and output files exactly as they are.

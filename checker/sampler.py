@@ -16,12 +16,12 @@ class CallCounter(torch.nn.Module):
 
 
 def sample_hypotheses(model, cond: torch.Tensor, k: int, steps: int, seed: int) -> torch.Tensor:
-    """cond (B,51) -> (B,k,51). Euler from t=0 to t=1 with `steps` equal steps.
+    """cond (B,C) -> (B,k,51). Euler from t=0 to t=1 with `steps` equal steps.
     Raises if the model was not called exactly `steps` times."""
     counter = CallCounter(model)
     gen = torch.Generator().manual_seed(int(seed))
     B = cond.shape[0]
-    c = cond.repeat_interleave(k, dim=0)                       # (B*k,51)
+    c = cond.repeat_interleave(k, dim=0)                       # (B*k,C)
     x = torch.randn(B * k, 51, generator=gen, dtype=c.dtype)
     dt = 1.0 / steps
     for i in range(steps):
