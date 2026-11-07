@@ -7,6 +7,8 @@ import argparse
 import json
 import os
 import shutil
+import signal
+import subprocess
 import threading
 import time
 from datetime import datetime, timedelta
@@ -304,8 +306,21 @@ def _finish(cfg, out, t0, tokens0, calls) -> dict:
     return out
 
 
+def _kill_orphan_training(cfg) -> None:
+    """A hard-killed loop leaves its checker train.py child running; it would steal CPU from the next run."""
+    pat = "check_train_.*/train.py --data " + C.abspath(cfg["paths"]["train"])
+    pids = subprocess.run(["pgrep", "-f", pat], capture_output=True, text=True).stdout.split()
+    for pid in pids:
+        try:
+            os.kill(int(pid), signal.SIGKILL)
+            print(f"killed orphan training process {pid}", flush=True)
+        except (ProcessLookupError, ValueError):
+            pass
+
+
 def resume(cfg) -> None:
-    """git checkout main, delete leftover iter/* branches."""
+    """Kill orphan training, git checkout main, delete leftover iter/* branches."""
+    _kill_orphan_training(cfg)
     _git("checkout", "--", cfg["paths"]["candidate"], cfg["paths"]["skills"], check_ok=False)
     _git("checkout", "main")
     for b in _git("branch", "--list", "iter/*").split():
@@ -338,7 +353,8 @@ def main() -> None:
         n += 1
         print(f"{out['iter_id']} {out['strategy']}: {'accepted ' + str(out['tag']) if out['accepted'] else 'rejected: ' + str(out['reason'])}",
               flush=True)
-    events.set_state(cfg, phase="idle")
+    # ends_at = actual stop time, so the dashboard shows "finished" (not "stalled") after an early stop
+    events.set_state(cfg, phase="idle", ends_at=datetime.now().isoformat(timespec="seconds"))
 
 
 if __name__ == "__main__":
