@@ -21,6 +21,16 @@ Rules:
 - Exit within --time-budget seconds. At most 5,000,000 parameters.
 - Read only the --data file. No network. No subprocess.
 - Each candidate changes one idea. Keep edits small.
+- Test your own code mentally: shapes must broadcast. Check every tensor op against the shapes below.
+
+INPUT CONTRACT (exact layout of the conditioning vector c, shape (N, 54), built in checker/check.py predict()):
+- c[:, 0:34]   2D keypoints, root-relative, normalized, reshape (N, 17, 2). Hidden joints are zeroed.
+- c[:, 34:51]  visibility mask, 17 values (1 = visible).
+- c[:, 51:54]  frame: (cx, cy, scale) of the person in the image, shape (N, 3). cx = (root_u - W/2) / focal,
+               cy = (root_v - H/2) / focal, scale = bbox diagonal / focal. Index 51 is cx, 52 is cy, 53 is scale.
+- x (N, 51) is the noisy pose being denoised; t (N,) is the flow time in [0, 1].
+- Broadcasting: a (N, 2) tensor must become (N, 1, 2) before it is combined with a (N, 17, 2) tensor.
+  Example: kp - c[:, None, 51:53] is valid; kp - c[:, 51:53, None] is not.
 Return exactly 4 candidates in this format and nothing else:
 <candidate id="A">
 <rationale>one sentence</rationale>
@@ -45,9 +55,19 @@ STRATEGIES = {
 # which leaves an empty answer. 400 leaves room; the line itself is still cut to 200 characters.
 LESSON_MAX_TOKENS = 400
 
-LESSON_PROMPT = """Write one line (max 200 characters) stating what was tried and what happened,
-as a reusable lesson. Attempt: {rationale}. Strategy: {strategy}.
-Outcome: {outcome}. Dev change: {delta}."""
+LESSON_PROMPT = """Write one line (max 200 characters) as a reusable lesson.
+Attempt: {rationale}. Strategy: {strategy}. Dev change: {delta}.
+Result class: {cls}.
+{guidance}
+Detail: {detail}"""
+
+LESSON_GUIDANCE = {
+    "pass": "The change beat the incumbent on paired seeds. State the gain.",
+    "regression": "The change was measured worse on paired seeds. State the measured loss, nothing more.",
+    "inconclusive": "The difference is inside seed noise. Do NOT say the idea works or fails, and do not explain why.",
+    "heldout_regression": "Dev improved, but held-out got worse on the same checkpoint. Say so.",
+    "crash": "The candidate never ran. Name the error. Make NO claim about the idea itself.",
+}
 
 
 @dataclass
@@ -69,8 +89,9 @@ def build_prompt(strategy: str, train_py: str, skills_md: str,
              "SKILLS:", skills_md, "", "RECENT ATTEMPTS:"]
     for s in recent:
         lines.append(f"{s['id']} | {s['strategy']} | {s['rationale']} | dev={s['dev']} | {s['result']}")
-    if strategy == "fix_last_failure":
-        lines += ["", "LAST ERROR:", str(last_error)]
+    if last_error:
+        lines += ["", "LAST ERROR (the most recent attempt crashed, so its idea was never tested; fix the cause):",
+                  str(last_error)]
     return SYSTEM, "\n".join(lines)
 
 
@@ -140,15 +161,16 @@ def diff_text(old: str, new: str) -> str:
     return "".join(difflib.unified_diff(old.splitlines(True), new.splitlines(True), "a/train.py", "b/train.py"))
 
 
-def write_lesson(iter_id: str, strategy: str, rationale: str, outcome: str,
+def write_lesson(iter_id: str, strategy: str, rationale: str, cls: str, detail: str,
                  dev_delta_mm: float | None, cfg: dict) -> str:
-    """One line, max 200 chars. outcome is 'accepted' or 'rejected: <reason>'."""
+    """One line, max 200 chars. cls is one of LESSON_GUIDANCE; detail is the measured numbers or the error text."""
     delta = "n/a" if dev_delta_mm is None else f"{dev_delta_mm:+.1f} mm"
-    prompt = LESSON_PROMPT.format(rationale=rationale, strategy=strategy, outcome=outcome, delta=delta)
+    prompt = LESSON_PROMPT.format(rationale=rationale, strategy=strategy, delta=delta, cls=cls,
+                                  guidance=LESSON_GUIDANCE[cls], detail=detail[-400:] or "none")
     text = chat(cfg["meta"]["lesson_model"], "", prompt, cfg, max_output_tokens=LESSON_MAX_TOKENS,
                 effort=cfg["meta"]["lesson_effort"])
     line = " ".join(text.split())
-    return (line or f"{strategy}: {rationale} -> {outcome}, dev change {delta}")[:200]
+    return (line or f"{strategy}: {rationale} -> {cls}, dev change {delta}")[:200]
 
 
 def main() -> None:

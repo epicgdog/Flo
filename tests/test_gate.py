@@ -74,8 +74,22 @@ def test_events_and_state_write_valid_json(tmp_path):
 
 
 def test_threshold_rules():
-    cfg = {"gate": {"dev_margin_sigmas": 1.0, "heldout_margin_sigmas": 1.0, "sigma_dev": 1.0, "sigma_heldout": 2.0}}
-    assert gate.passes_dev([8.5], 10.0, cfg)
-    assert not gate.passes_dev([9.5], 10.0, cfg)
+    cfg = {"gate": {"paired_margin_sigmas": 1.0, "heldout_margin_sigmas": 1.0, "sigma_dev": 0.7073, "sigma_heldout": 2.0}}
     assert gate.passes_heldout(11.9, 10.0, cfg)
     assert not gate.passes_heldout(12.1, 10.0, cfg)
+
+
+def test_paired_classes_with_two_seeds():
+    cfg = {"gate": {"paired_margin_sigmas": 1.0, "sigma_dev": 0.7073}}
+    # threshold for n=2 is sigma*sqrt(2)/sqrt(2) = 0.7073 mm
+    assert gate.classify_dev([-1.46, -1.05], cfg) == "pass"        # the attempt-0024 pattern: mean -1.25
+    assert gate.classify_dev([-0.5, -0.5], cfg) == "near_miss"     # mean -0.5, between -T/2 and -T
+    assert gate.classify_dev([-0.1, 0.2], cfg) == "inconclusive"
+    assert gate.classify_dev([1.5, 1.0], cfg) == "regression"
+
+
+def test_single_seed_screen_uses_full_threshold():
+    cfg = {"gate": {"paired_margin_sigmas": 1.0, "sigma_dev": 0.7073}}
+    assert gate.paired_threshold(1, cfg) == pytest.approx(1.0, abs=1e-3)
+    assert gate.classify_dev([-1.2], cfg) == "pass"
+    assert gate.classify_dev([0.3], cfg) == "inconclusive"

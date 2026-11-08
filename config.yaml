@@ -47,7 +47,7 @@ score:
 gate:
   sigma_dev: 0.7073          # filled by calibrate.py
   sigma_heldout: 1.7430      # filled by calibrate.py
-  dev_margin_sigmas: 2
+  paired_margin_sigmas: 1.0  # mean paired dev gain must exceed this many sigma_diff / sqrt(n_seeds)
   heldout_margin_sigmas: 1
 meta:
   base_url: https://api.meta.ai/v1
@@ -69,6 +69,8 @@ loop:
   snap_audit_every: 5
   early_stop_check_s: 30
   early_stop_min_s: 60
+  trials: true               # short dev trial for every valid candidate; full run only for the best trial
+  trial_budget_s: 60
   strategies: [tune_optimizer, timestep_sampling, architecture, conditioning, loss_and_target, regularization, fix_last_failure]
 sim:
   person_yaw_deg: [0, 360]

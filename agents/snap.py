@@ -1,8 +1,7 @@
 """Snap decider: route, rank, should_stop, triage. All requests go through _call().
 
 Any exception, timeout (snap.timeout_s) or answer outside the options uses the fallback.
-Snap is disabled (snap.enabled: false; no SUBQ_API_KEY and no known request format), so every decision
-falls back without calling _call. Milestone M9 only needs to fill in _call.
+Snap is disabled in config.yaml (snap.enabled: false), so every decision falls back without calling _call. Set snap.enabled, snap.base_url and snap.model to turn it on.
 """
 import os
 import subprocess
@@ -38,11 +37,23 @@ def build_context(cfg: dict) -> str:
 
 
 def _call(question: str, options: list[str], context: str) -> str:
-    """The only code that knows Snap's request format (SUBQ_API_KEY, snap.base_url, snap.model, snap.timeout_s)."""
+    """The only code that knows Snap's request format. Uses an OpenAI-compatible chat endpoint:
+    snap.base_url and snap.model from config.yaml, key from SUBQ_API_KEY (or SUBQ_API, the name in .env)."""
+    import openai
+
+    from agents import llm
+    llm._load_dotenv()
     cfg = C.load()
-    if not os.environ.get("SUBQ_API_KEY") or cfg["snap"]["base_url"] == "SET_ME":
+    key = os.environ.get("SUBQ_API_KEY") or os.environ.get("SUBQ_API")
+    if not key or cfg["snap"]["base_url"] == "SET_ME" or cfg["snap"]["model"] == "SET_ME":
         raise RuntimeError("Snap not configured")
-    raise NotImplementedError("Snap request format not known yet (milestone M9)")
+    client = openai.OpenAI(base_url=cfg["snap"]["base_url"], api_key=key, timeout=cfg["snap"]["timeout_s"])
+    prompt = (f"{context}\n\nQUESTION: {question}\nOPTIONS: {', '.join(options)}\n"
+              "Reply with exactly one option, copied verbatim, and nothing else.")
+    resp = client.chat.completions.create(model=cfg["snap"]["model"], max_tokens=50,
+                                          messages=[{"role": "user", "content": prompt}])
+    answer = (resp.choices[0].message.content or "").strip().strip(".").strip()
+    return answer
 
 
 def _decide(decision: str, question: str, options: list[str], context: str, cfg: dict, fallback: str):
@@ -52,7 +63,7 @@ def _decide(decision: str, question: str, options: list[str], context: str, cfg:
     if cfg["snap"]["enabled"]:
         try:
             answer = _call(question, options, context)
-            if answer in options:
+            if answer in options:          # exact match only; anything else falls back
                 choice, used = answer, False
         except Exception:
             pass

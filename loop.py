@@ -14,7 +14,7 @@ import time
 from datetime import datetime, timedelta
 
 from agents import coder, llm, snap
-from checker.check import check
+from checker.check import check, evaluate
 from harness import config as C
 from harness import events, gate, history
 
@@ -62,10 +62,17 @@ def last_error(cfg) -> str | None:
     return None
 
 
-def append_lesson(cfg, accepted: bool, line: str) -> None:
+def append_lesson(cfg, cls: str, line: str) -> None:
+    """Put the lesson in the section for its class. Crashes and inconclusive results are not bans."""
+    prefix = {"pass": "## Confirmed", "regression": "## Failed ideas", "heldout_regression": "## Failed ideas",
+              "inconclusive": "## Inconclusive", "crash": "## Untested"}[cls]
     path = C.abspath(cfg["paths"]["skills"])
     lines = open(path).read().rstrip("\n").split("\n")
-    head = next(i for i, x in enumerate(lines) if x.startswith("## Confirmed" if accepted else "## Failed ideas"))
+    head = next((i for i, x in enumerate(lines) if x.startswith(prefix)), None)
+    if head is None:
+        lines += ["", prefix + (" (not evaluated; not a ban)" if cls == "crash" else
+                                " (within seed noise; not a ban)" if cls == "inconclusive" else "")]
+        head = len(lines) - 1
     end = next((i for i in range(head + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
     lines.insert(end, line)
     open(path, "w").write("\n".join(lines) + "\n")
@@ -147,6 +154,108 @@ def train_stage(cfg, iter_id, set_name, seed, label, phase, context) -> dict:
     return rep
 
 
+CRASH_STATUSES = {"static_fail", "train_crash", "load_fail", "too_large", "timeout", "nan"}
+
+
+def run_trials(cfg, iter_id, pairs) -> tuple[list[dict], dict | None]:
+    """Short dev trial (seed 0, loop.trial_budget_s) for every valid candidate, one at a time.
+    Returns (rows, best ok row or None). Trial scores are only comparable with each other, not with the incumbent."""
+    budget = cfg["loop"]["trial_budget_s"]
+    tcfg = {**cfg, "train": {**cfg["train"], "time_budget_s": budget, "kill_after_s": budget + 15}}
+    rows = []
+    for cand, new_py in pairs:
+        d = os.path.join(WORK, f"{iter_id}_trial{cand.id}")
+        shutil.rmtree(d, ignore_errors=True)
+        os.makedirs(d)
+        with open(os.path.join(d, "train.py"), "w") as f:
+            f.write(new_py)
+        events.set_state(cfg, phase=f"trial_{cand.id}", train_elapsed_s=0.0, train_loss=None)
+        rep = check(d, "dev", 0, iter_id, os.path.join(d, "out"), tcfg)
+        rows.append({"id": cand.id, "status": rep["status"], "score": rep["score"], "error": rep.get("error")})
+        events.emit("trial_finished", cfg, iter_id=iter_id, candidate=cand.id, status=rep["status"], score=rep["score"])
+    history.save(iter_id, "trials.json", rows, cfg)
+    ok = [r for r in rows if r["status"] == "ok"]
+    return rows, (min(ok, key=lambda r: r["score"]) if ok else None)
+
+
+def incumbent_score(cfg, best: dict, seed: int) -> float:
+    """Incumbent's dev score on a seed it has not been run on yet. Trained once, then cached in history."""
+    owner = best["iter_id"] or "0000"
+    cached = history.load(owner, f"incumbent_seed{seed}.json", cfg)
+    if cached:
+        return cached["score"]
+    code = subprocess.run(["git", "show", f"{best['tag']}:{cfg['paths']['candidate']}"], cwd=C.ROOT,
+                          capture_output=True, text=True, check=True).stdout
+    d = os.path.join(WORK, f"incumbent_{best['tag']}_seed{seed}")
+    shutil.rmtree(d, ignore_errors=True)
+    os.makedirs(d)
+    with open(os.path.join(d, "train.py"), "w") as f:
+        f.write(code)
+    rep = check(d, "dev", seed, owner, os.path.join(d, "out"), cfg)
+    shutil.rmtree(d, ignore_errors=True)
+    if rep["status"] != "ok":
+        raise RuntimeError(f"incumbent seed {seed} failed: {rep['status']} {rep.get('error')}")
+    history.save(owner, f"incumbent_seed{seed}.json", {"tag": best["tag"], "score": rep["score"]}, cfg)
+    return rep["score"]
+
+
+def full_eval(cfg, iter_id, context, best, out) -> tuple[str, str | None, str]:
+    """Full pipeline for the committed candidate. Returns (class, reason, detail) and fills out[dev/dev2/dev3/heldout].
+    One training run per seed. Held-out is scored on the seed-0 checkpoint that dev scored, so there is no second run."""
+    rep = train_stage(cfg, iter_id, "dev", 0, "dev", "training_dev", context)
+    if rep["status"] in CRASH_STATUSES:
+        return "crash", rep["status"], rep.get("error") or rep["status"]
+    if rep["status"] != "ok":
+        return "regression", rep["status"], rep.get("error") or rep["status"]
+    out["dev"] = rep["score"]
+    work0 = os.path.join(WORK, f"{iter_id}_dev")
+    hev = evaluate(work0, C.abspath(cfg["paths"]["heldout"]), cfg)
+    history.save(iter_id, "report_heldout.json", {"iter_id": iter_id, "set": "heldout", "seed": 0,
+                                                  "from_checkpoint": "dev_seed0", "status": hev["status"],
+                                                  "score": hev["score"], "metrics": hev["metrics"],
+                                                  "error": hev["error"], "params": hev["params"]}, cfg)
+    if hev["status"] in CRASH_STATUSES:
+        return "crash", hev["status"], hev["error"] or hev["status"]
+    if hev["status"] != "ok":
+        return "regression", hev["status"], hev["error"] or hev["status"]
+    out["heldout"] = hev["score"]
+
+    d0 = out["dev"] - best["dev"]
+    if gate.classify_dev([d0], cfg) == "regression":
+        return "regression", "no_gain", f"seed0 paired dev diff {d0:+.2f} mm"
+
+    rep2 = train_stage(cfg, iter_id, "dev", 1, "dev2", "training_dev_2", context)
+    if rep2["status"] in CRASH_STATUSES or rep2["status"] != "ok":
+        return "crash", rep2["status"], rep2.get("error") or rep2["status"]
+    out["dev2"] = rep2["score"]
+    inc2 = best["dev2"] if best.get("dev2") is not None else incumbent_score(cfg, best, 1)
+    diffs = [d0, out["dev2"] - inc2]
+    cls = gate.classify_dev(diffs, cfg)
+    if cls == "near_miss":                      # leaning better: confirm on a third seed, incumbent included
+        rep3 = train_stage(cfg, iter_id, "dev", 2, "dev3", "training_dev_3", context)
+        if rep3["status"] in CRASH_STATUSES or rep3["status"] != "ok":
+            return "crash", rep3["status"], rep3.get("error") or rep3["status"]
+        out["dev3"] = rep3["score"]
+        diffs.append(out["dev3"] - incumbent_score(cfg, best, 2))
+        cls = gate.classify_dev(diffs, cfg)
+    detail = f"paired dev diffs mm {[round(x, 2) for x in diffs]}"
+    if cls == "regression":
+        return "regression", "no_gain", detail
+    if cls != "pass":
+        return "inconclusive", "no_gain", detail
+    if not gate.passes_heldout(out["heldout"], best["heldout"], cfg):
+        return "heldout_regression", "heldout_regression", detail
+    return "pass", None, detail
+
+
+def promote(iter_id: str, cfg) -> None:
+    """The artifact that was scored on both splits: the dev seed-0 checkpoint."""
+    mdir = _hist(cfg, iter_id, "model")
+    os.makedirs(mdir, exist_ok=True)
+    for fn in ("model.pt", "model_def.py"):
+        shutil.copy(os.path.join(WORK, f"{iter_id}_dev", fn), os.path.join(mdir, fn))
+
+
 def run_iteration(iter_id: str, cfg: dict, use_snap: bool) -> dict:
     """Returns outcome.json content."""
     cfg = {**cfg, "snap": {**cfg["snap"], "enabled": bool(use_snap and cfg["snap"]["enabled"])}}
@@ -155,8 +264,8 @@ def run_iteration(iter_id: str, cfg: dict, use_snap: bool) -> dict:
     best = history.best(cfg)
     snap.drain_calls()
     out = {"iter_id": iter_id, "strategy": None, "rationale": None, "accepted": False, "reason": None,
-           "tag": None, "dev": None, "dev2": None, "heldout": None,
-           "best_dev_before": best["dev"], "best_heldout_before": best["heldout"],
+           "cls": None, "tag": None, "dev": None, "dev2": None, "dev3": None, "heldout": None,
+           "best_dev_before": best["dev"], "best_heldout_before": best["heldout"], "trials": None,
            "triage": None, "lesson": None, "duration_s": None, "llm_tokens": None}
     calls: list[dict] = []
 
@@ -169,7 +278,7 @@ def run_iteration(iter_id: str, cfg: dict, use_snap: bool) -> dict:
     events.emit("iter_start", cfg, iter_id=iter_id)
     events.set_state(cfg, iter_id=iter_id, phase="starting", strategy=None, rationale=None,
                      train_elapsed_s=None, train_loss=None, best=best)
-    lesson_due = False
+    lesson_due, cls, detail = False, None, ""
     try:
         train_py = open(C.abspath(cfg["paths"]["candidate"])).read()
         context = snap.build_context(cfg)
@@ -195,66 +304,52 @@ def run_iteration(iter_id: str, cfg: dict, use_snap: bool) -> dict:
             gate.reject(iter_id)
             events.emit("rejected", cfg, iter_id=iter_id, reason="no_valid_candidates")
             return _finish(cfg, out, t0, tokens0, calls)
-        # 4
+        # 4 ranking (Snap); only used to pick the candidate when trials are off
         events.set_state(cfg, phase="ranking")
         texts = [f"id={c.id}\nrationale: {c.rationale}\n{coder.diff_text(train_py, new)}" for c, new in pairs]
         order, _ = snap.rank(context, texts, cfg)
         history.save(iter_id, "ranking.json", {"order": [pairs[i][0].id for i in order]}, cfg)
         events.emit("candidates_ranked", cfg, iter_id=iter_id, order=[pairs[i][0].id for i in order])
         save_snap()
-        chosen, chosen_py = pairs[order[0]]
-        out["rationale"] = chosen.rationale
-        # 5
-        events.set_state(cfg, phase="committing", rationale=chosen.rationale)
-        with open(C.abspath(cfg["paths"]["candidate"]), "w") as f:
-            f.write(chosen_py)
-        gate.commit_candidate(iter_id, chosen.rationale)
-        history.save(iter_id, "chosen.diff", _git("diff", "main", "--", cfg["paths"]["candidate"]) + "\n", cfg)
-        events.emit("candidate_committed", cfg, iter_id=iter_id, candidate=chosen.id)
-        lesson_due = True
-        # 6-8
-        reason = None
-        rep = last = train_stage(cfg, iter_id, "dev", 0, "dev", "training_dev", context)
-        save_snap()
-        if rep["status"] != "ok":
-            reason = rep["status"]
-        else:
-            out["dev"] = rep["score"]
-            if not gate.passes_dev([out["dev"]], best["dev"], cfg):
-                reason = "no_gain"
+        chosen_idx = order[0]
+        # 5 short trials: every valid candidate gets the same short budget; only the best one gets a full run
+        if cfg["loop"]["trials"]:
+            trial_rows, winner = run_trials(cfg, iter_id, pairs)
+            out["trials"] = trial_rows
+            if winner is None:
+                errs = [r["error"] for r in trial_rows if r.get("error")]
+                detail = str(errs[0]) if errs else "all trials failed"
+                history.save(iter_id, "report_dev.json", {"status": "trials_failed", "error": detail}, cfg)
+                cls, out["reason"] = "crash", "trials_failed"
             else:
-                rep2 = last = train_stage(cfg, iter_id, "dev", 1, "dev2", "training_dev_2", context)
-                if rep2["status"] != "ok":
-                    reason = rep2["status"]
-                else:
-                    out["dev2"] = rep2["score"]
-                    if not gate.passes_dev([out["dev"], out["dev2"]], best["dev"], cfg):
-                        reason = "no_gain"
-                    else:
-                        reph = last = train_stage(cfg, iter_id, "heldout", 0, "heldout", "training_heldout", context)
-                        if reph["status"] != "ok":
-                            reason = reph["status"]
-                        else:
-                            out["heldout"] = reph["score"]
-                            if not gate.passes_heldout(out["heldout"], best["heldout"], cfg):
-                                reason = "heldout_regression"
+                chosen_idx = next(i for i, (c, _) in enumerate(pairs) if c.id == winner["id"])
+        chosen, chosen_py = pairs[chosen_idx]
+        out["rationale"] = chosen.rationale
+        lesson_due = True
+        if cls is None:
+            # 6 commit and full evaluation
+            events.set_state(cfg, phase="committing", rationale=chosen.rationale)
+            with open(C.abspath(cfg["paths"]["candidate"]), "w") as f:
+                f.write(chosen_py)
+            gate.commit_candidate(iter_id, chosen.rationale)
+            history.save(iter_id, "chosen.diff", _git("diff", "main", "--", cfg["paths"]["candidate"]) + "\n", cfg)
+            events.emit("candidate_committed", cfg, iter_id=iter_id, candidate=chosen.id)
+            cls, out["reason"], detail = full_eval(cfg, iter_id, context, best, out)
+            save_snap()
         # 9
         events.set_state(cfg, phase="deciding")
-        if reason is None:
+        out["cls"] = cls
+        if cls == "pass":
             tag = gate.accept(iter_id, out["dev"], out["heldout"])
-            out.update(accepted=True, tag=tag)
-            mdir = _hist(cfg, iter_id, "model")
-            os.makedirs(mdir, exist_ok=True)
-            for fn in ("model.pt", "model_def.py"):
-                shutil.copy(os.path.join(WORK, f"{iter_id}_heldout", fn), os.path.join(mdir, fn))
+            out.update(accepted=True, tag=tag, reason=None)
+            promote(iter_id, cfg)
             events.emit("accepted", cfg, iter_id=iter_id, tag=tag, dev=out["dev"], heldout=out["heldout"])
         else:
             gate.reject(iter_id)
-            out["reason"] = reason
-            events.emit("rejected", cfg, iter_id=iter_id, reason=reason)
+            events.emit("rejected", cfg, iter_id=iter_id, reason=out["reason"], cls=cls)
             # 10
             events.set_state(cfg, phase="triaging")
-            out["triage"], _ = snap.triage(context, {"status": reason, "error": last.get("error")}, TRIAGE_OPTIONS, cfg)
+            out["triage"], _ = snap.triage(context, {"status": out["reason"], "error": detail}, TRIAGE_OPTIONS, cfg)
             events.emit("triaged", cfg, iter_id=iter_id, triage=out["triage"])
             save_snap()
         # audit (Snap on): train and dev-score the lowest-ranked candidate; not gated, not merged
@@ -268,20 +363,20 @@ def run_iteration(iter_id: str, cfg: dict, use_snap: bool) -> dict:
                         bottom_id=low.id, bottom_score=arep["score"])
     except Exception as e:
         out.update(accepted=False, reason=f"error: {e!r}")
+        lesson_due = False
         events.emit("error", cfg, iter_id=iter_id, error=repr(e))
         _git("checkout", "--", cfg["paths"]["candidate"], check_ok=False)
         if _git("branch", "--list", f"iter/{iter_id}", check_ok=False):
             gate.reject(iter_id)
-    # 11
+    # 11 lesson: class decides the section, and the detail (numbers or the real error) goes to the writer
     if lesson_due:
         try:
             events.set_state(cfg, phase="learning")
-            result = "accepted" if out["accepted"] else f"rejected: {out['reason']}"
             delta = None if out["dev"] is None or best["dev"] is None else out["dev"] - best["dev"]
-            lesson = coder.write_lesson(iter_id, out["strategy"], out["rationale"], result, delta, cfg)
+            lesson = coder.write_lesson(iter_id, out["strategy"], out["rationale"], cls, detail, delta, cfg)
             out["lesson"] = lesson
             history.save(iter_id, "lesson.txt", lesson + "\n", cfg)
-            append_lesson(cfg, out["accepted"], f"- [{iter_id}] {lesson}")
+            append_lesson(cfg, cls, f"- [{iter_id}] {lesson}")
             _git("add", cfg["paths"]["skills"])
             _git("commit", "-m", f"lesson {iter_id}")
             events.emit("lesson_written", cfg, iter_id=iter_id, lesson=lesson)

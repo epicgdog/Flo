@@ -4,9 +4,10 @@
 - [0014] Lesson: Use an EMA of weights at sampling time for the flow model—smoother, better-generalizing output at no extra parameter cost; accepted, dev improved by -3.4 mm.
 - [0017] Lesson: FiLM modulation of each residual block by the timestep and 2D condition beat input-only conditioning, cutting dev error by 1.5 mm—adopt per-block modulation.
 - [0026] Lesson: Switch target to clean-pose prediction (converted internally to velocity) to weight final-pose accuracy over uniform velocity error; accepted, dev improved 4.3 mm.
+- [0040] Cap the clean-pose loss weight near t=1: accepted (-2.7 mm dev); limiting high-t weight stops exploding gradients from dominating training.
 ## Failed ideas (do not retry without a new reason)
 - [0003] Increasing to width 640 with 5 blocks to stay under 5M params gave +1.8mm dev error with no gain — rejected; blind capacity adds overfit risk.
-- [0004] Lesson: Zeroing invisible 2D joints to block occluded noise while keeping mask signal gave no gain (+0.8mm dev) — rejected.
+- [0004] Zeroing invisible 2D joints: +0.8 mm dev, inside seed noise (inconclusive). Note: hidden joints are already zeroed in checker/datagen.py, so this step is an identity and the test did not check the idea.
 - [0005] Visibility-weighted velocity loss gave no gain (-0.2mm): occluded joints add little noise, visible joints already dominate.
 - [0006] Lesson: AdamW weight decay to curb pose overfitting gave no gain, dev +2.6 mm — rejected; avoid weight decay for this.
 - [0008] Raising AdamW to 1e-3 for this LayerNorm MLP gave only +1.9 mm dev gain in the fixed budget (rejected: no_gain), yielding no useful faster convergence.
@@ -22,12 +23,27 @@
 - [0020] Lesson: Adding small Gaussian noise only to visible 2D keypoints gave no gain (+3.2 mm dev worsening), so it doesn't regularize against detector localization error on unseen data.
 - [0022] Lesson: Retrying the unevaluated cosine schedule (tune_optimizer) gave no gain—dev worsened +2.1 mm and was rejected; it doesn't improve the final minimum under a fixed budget.
 - [0023] Uniform timestep sampling vs logit-normal: rejected (+2.9 mm worse); even endpoint coverage didn't improve ODE integration—keep mid-range timestep bias.
-- [0024] Gated linear units in residual blocks for multiplicative feature interactions gave no gain (-1.5 mm dev, rejected); plain GELU MLP suffices within the parameter limit.
-- [0025] Lesson: Appending frame-normalized keypoints for translation- and scale-invariant pose conditioning (alongside absolute coordinates) crashed training—avoid this conditioning change.
+- [0024] Gated linear units: -1.5 mm dev on seed 0 under the old gate (rejected then). Measured gain, not confirmed: retest with paired seeds before judging GLU blocks.
 - [0027] Random occlusion augmentation as regularization gave no robustness gain (+0.8 mm dev error), so simulating missing joints doesn't prevent over-reliance on visible keypoints.
 - [0028] Sampling batch indices on-GPU to eliminate per-step NumPy-to-device transfer gave only +0.3 mm (no gain): that transfer isn't the bottleneck for adding steps within budget.
 - [0029] Lesson: Longer EMA horizon (tune_optimizer) smoothed saved weights but yielded only +0.1 mm dev gain—rejected as no_gain; heavier EMA alone won't improve generalization.
 - [0030] Shifting logit-normal mean down to rebalance clean-pose velocity loss (1/(1-t)^2) toward low-mid t gave +1.6 mm dev error—no gain; keep original timestep sampling.
+- [0033] Lesson: Adding a bone-vector loss on the implied clean pose to enforce limb lengths/skeleton geometry gave no gain (+0.2 mm dev), so per-coordinate MSE alone is sufficient.
+- [0034] Horizontal-flip augmentation with left/right joint swaps gave no gain (+4.7 mm worse); mirror-symmetry regularization alone doesn't add useful pose diversity.
+- [0035] Reshaping keypoints to (-1,17,2) and subtracting frame position on the joint axis fixed the 17-vs-2 broadcast crash, but appending center/scale-normalized keypoints yielded NaN—validate normalization 
+- [0036] Halving batch size to 128 to double optimizer updates/sample worsened dev by +2.8 mm and was rejected—don't sacrifice batch size for update count under a fixed wall-clock budget.
+- [0037] Antithetic timestep pairs (low/high t per batch, logit-normal marginal preserved) gave no gain (+0.3 mm, rejected): symmetric variance reduction doesn't help timestep sampling.
+- [0038] Deeper but narrower residual stack for flow field: no gain (-0.7mm Dev) at fixed params, so don't sacrifice width for depth.
+- [0039] Lesson: Fourier features for 2D coords (conditioning) gave no gain (+0.3 mm): raw normalized coordinates already give MLP sufficient spatial detail, so skip multi-scale encoding.
+- [0041] Small in-plane rotation augmentation (2D keypoints around person centre, 3D pose around camera axis) gave no gain (-0.3 mm); don't rely on it for rotational equivariance.
+- [0042] Tried deriving center/scale-normalized keypoints inside forward from the 54-dim condition (clamped) vs external expansion; fixed addmm crash but +0.1 mm, no gain—normalization alone won't help.
+- [0043] Larger batch + linearly scaled LR (tune_optimizer) cut noise/overhead but gave no gain (-1.0 mm dev), so don't enlarge batch under a fixed budget.
+- [0044] Timestep sampling: 15% uniform + logit-normal mixture gave no gain (-0.2 mm) despite endpoint coverage for ODE; keep pure logit-normal mid-timestep focus.
+- [0045] Lesson: Expanding each block's MLP hidden dim to 2x width (~4.90M params, same depth) gave no gain, worsening dev by -0.9 mm, so wider MLPs don't improve per-block expressivity here.
+- [0046] Separate learned encoders for coordinates, mask, and frame to scale/fuse each modality vs flat linear mixing: rejected, no gain (-1.0 mm); keep the simpler flat input.
 ## Open hypotheses
 - [hint] The time budget is fixed, so more training steps per second lowers error: try bf16 autocast, a larger batch with a matching learning rate, or sampling batch indices on the GPU instead of with numpy.
 - [hint] 0005 (weight the velocity loss by 2D visibility) scored 72.29, just short of the bar; try combining it with another change.
+
+## Untested (not evaluated; not a ban)
+- [0025] Not evaluated: the candidate crashed on a tensor broadcasting bug (kp (N,17,2) minus c[:,51:53,None] (N,2,1)). Idea untested; use c[:, None, 51:53].
