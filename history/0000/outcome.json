@@ -1,0 +1,17 @@
+{
+  "iter_id": "0000",
+  "strategy": null,
+  "rationale": "baseline train.py",
+  "accepted": true,
+  "reason": null,
+  "tag": "v0",
+  "dev": 77.91010583659828,
+  "dev2": 78.27491942037138,
+  "heldout": 118.70160989124437,
+  "best_dev_before": null,
+  "best_heldout_before": null,
+  "triage": null,
+  "lesson": null,
+  "duration_s": null,
+  "llm_tokens": 0
+}

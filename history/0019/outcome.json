@@ -1,0 +1,17 @@
+{
+  "iter_id": "0019",
+  "strategy": "loss_and_target",
+  "rationale": "Huber velocity loss should reduce the influence of rare extreme pose or occlusion outliers that dominate squared error while preserving smooth gradients for typical errors.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 66.743831240567,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 67.59418680425208,
+  "best_heldout_before": 99.45541594268263,
+  "triage": "no_gain",
+  "lesson": "Huber velocity loss gave no gain (-0.9 mm, rejected): down-weighting rare extreme pose/occlusion outliers doesn't help; MSE's smooth gradients for typical errors suffice.",
+  "duration_s": 198.6,
+  "llm_tokens": 5526
+}

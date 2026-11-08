@@ -1,0 +1,75 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Adding explicit 2D bone-vector differences gives the conditioner direct limb-direction and length information that raw joint coordinates force the MLP to relearn.",
+      "edits": [
+        [
+          "        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)",
+          "        self.inp = nn.Linear(51 + 86 + 64, width)\n        self.cond = nn.Linear(86 + 64, width)"
+        ],
+        [
+          "        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))",
+          "        kp2 = c[:, :34].reshape(-1, 17, 2)\n        bone = (kp2[:, [0, 0, 1, 2, 5, 5, 7, 6, 8, 5, 6, 11, 11, 13, 12, 14], :] - kp2[:, [1, 2, 3, 4, 6, 7, 9, 8, 10, 11, 12, 12, 13, 15, 14, 16], :]).reshape(-1, 32)\n        cc = torch.cat([c, bone], dim=1)\n        e = self.cond(torch.cat([cc, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, cc, sinusoidal(t)], dim=1))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "Supplying frame-relative keypoints alongside the raw coordinates separates the person's canonical 2D pose from their absolute image position and scale.",
+      "edits": [
+        [
+          "        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)",
+          "        self.inp = nn.Linear(51 + 88 + 64, width)\n        self.cond = nn.Linear(88 + 64, width)"
+        ],
+        [
+          "        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))",
+          "        kp2 = c[:, :34].reshape(-1, 17, 2)\n        rel = ((kp2 - c[:, 51:53, None]) / c[:, 53:54, None].clamp(min=0.05)).reshape(-1, 34)\n        cc = torch.cat([c, rel], dim=1)\n        e = self.cond(torch.cat([cc, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, cc, sinusoidal(t)], dim=1))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Multi-frequency sinusoidal features of the 2D coordinates let the conditioner represent fine spatial distinctions that a single linear layer on normalized coordinates can blur.",
+      "edits": [
+        [
+          "        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)",
+          "        self.inp = nn.Linear(51 + 258 + 64, width)\n        self.cond = nn.Linear(258 + 64, width)"
+        ],
+        [
+          "        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))",
+          "        f = c[:, :34]\n        four = torch.cat([torch.sin(f * 3.14159265), torch.cos(f * 3.14159265), torch.sin(f * 6.2831853), torch.cos(f * 6.2831853), torch.sin(f * 12.566371), torch.cos(f * 12.566371)], dim=1)\n        cc = torch.cat([c, four], dim=1)\n        e = self.cond(torch.cat([cc, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, cc, sinusoidal(t)], dim=1))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "Encoding keypoints, visibility mask, and frame geometry through separate learned projections before summing prevents one modality from being diluted inside a single mixed linear layer.",
+      "edits": [
+        [
+          "        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)",
+          "        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond_kp = nn.Linear(34, width)\n        self.cond_mk = nn.Linear(17, width)\n        self.cond_fr = nn.Linear(3 + 64, width)"
+        ],
+        [
+          "        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))",
+          "        e = self.cond_kp(c[:, :34]) + self.cond_mk(c[:, 34:51]) + self.cond_fr(torch.cat([c[:, 51:54], sinusoidal(t)], dim=1))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Adding explicit 2D bone-vector differences gives the conditioner direct limb-direction and length information that raw joint coordinates force the MLP to relearn.</rationale>\n<edit>\n<search>        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)</search>\n<replace>        self.inp = nn.Linear(51 + 86 + 64, width)\n        self.cond = nn.Linear(86 + 64, width)</replace>\n</edit>\n<edit>\n<search>        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))</search>\n<replace>        kp2 = c[:, :34].reshape(-1, 17, 2)\n        bone = (kp2[:, [0, 0, 1, 2, 5, 5, 7, 6, 8, 5, 6, 11, 11, 13, 12, 14], :] - kp2[:, [1, 2, 3, 4, 6, 7, 9, 8, 10, 11, 12, 12, 13, 15, 14, 16], :]).reshape(-1, 32)\n        cc = torch.cat([c, bone], dim=1)\n        e = self.cond(torch.cat([cc, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, cc, sinusoidal(t)], dim=1))</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>Supplying frame-relative keypoints alongside the raw coordinates separates the person's canonical 2D pose from their absolute image position and scale.</rationale>\n<edit>\n<search>        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)</search>\n<replace>        self.inp = nn.Linear(51 + 88 + 64, width)\n        self.cond = nn.Linear(88 + 64, width)</replace>\n</edit>\n<edit>\n<search>        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))</search>\n<replace>        kp2 = c[:, :34].reshape(-1, 17, 2)\n        rel = ((kp2 - c[:, 51:53, None]) / c[:, 53:54, None].clamp(min=0.05)).reshape(-1, 34)\n        cc = torch.cat([c, rel], dim=1)\n        e = self.cond(torch.cat([cc, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, cc, sinusoidal(t)], dim=1))</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Multi-frequency sinusoidal features of the 2D coordinates let the conditioner represent fine spatial distinctions that a single linear layer on normalized coordinates can blur.</rationale>\n<edit>\n<search>        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)</search>\n<replace>        self.inp = nn.Linear(51 + 258 + 64, width)\n        self.cond = nn.Linear(258 + 64, width)</replace>\n</edit>\n<edit>\n<search>        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))</search>\n<replace>        f = c[:, :34]\n        four = torch.cat([torch.sin(f * 3.14159265), torch.cos(f * 3.14159265), torch.sin(f * 6.2831853), torch.cos(f * 6.2831853), torch.sin(f * 12.566371), torch.cos(f * 12.566371)], dim=1)\n        cc = torch.cat([c, four], dim=1)\n        e = self.cond(torch.cat([cc, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, cc, sinusoidal(t)], dim=1))</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>Encoding keypoints, visibility mask, and frame geometry through separate learned projections before summing prevents one modality from being diluted inside a single mixed linear layer.</rationale>\n<edit>\n<search>        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)</search>\n<replace>        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond_kp = nn.Linear(34, width)\n        self.cond_mk = nn.Linear(17, width)\n        self.cond_fr = nn.Linear(3 + 64, width)</replace>\n</edit>\n<edit>\n<search>        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))</search>\n<replace>        e = self.cond_kp(c[:, :34]) + self.cond_mk(c[:, 34:51]) + self.cond_fr(torch.cat([c[:, 51:54], sinusoidal(t)], dim=1))</replace>\n</edit>\n</candidate>"
+  ]
+}

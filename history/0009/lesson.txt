@@ -1,0 +1,1 @@
+Narrowing the logit-normal to concentrate on hard mid-range timesteps for velocity prediction gave no gain (+1.9 mm worse), so keep broader timestep sampling.

@@ -1,0 +1,1 @@
+Adding explicit 2D bone-vector differences to conditioner gave no gain (-0.2 mm dev): raw joint coordinates already encode limb direction/length for the MLP.

@@ -1,0 +1,71 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Raise AdamW learning rate to converge faster within the fixed time budget.",
+      "edits": [
+        [
+          "    opt = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.0)",
+          "    opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.0)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "Add budget-aware cosine learning-rate decay to stabilize late training.",
+      "edits": [
+        [
+          "import argparse\nimport json\nimport os\nimport time",
+          "import argparse\nimport json\nimport math\nimport os\nimport time"
+        ],
+        [
+          "        opt.zero_grad()\n        loss.backward()\n        opt.step()\n        step += 1",
+          "        frac = min(1.0, max(0.0, (time.time() - start) / max(stop_at, 1e-6)))\n        lr_mult = 0.5 * (1.0 + math.cos(math.pi * frac))\n        for pg in opt.param_groups:\n            pg[\"lr\"] = 1e-4 * (0.05 + 0.95 * lr_mult)\n        opt.zero_grad()\n        loss.backward()\n        opt.step()\n        step += 1"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Increase batch size to reduce gradient noise and improve throughput on CPU.",
+      "edits": [
+        [
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)",
+          "        idx = torch.from_numpy(rng.integers(0, N, 1024)).to(device)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "Add exponential moving average of weights for better generalization at test time.",
+      "edits": [
+        [
+          "    opt = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.0)",
+          "    opt = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.0)\n    ema_decay = 0.999\n    ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}"
+        ],
+        [
+          "        opt.zero_grad()\n        loss.backward()\n        opt.step()\n        step += 1",
+          "        opt.zero_grad()\n        loss.backward()\n        opt.step()\n        with torch.no_grad():\n            for k, v in model.state_dict().items():\n                ema_state[k].mul_(ema_decay).add_(v.detach(), alpha=1.0 - ema_decay)\n        step += 1"
+        ],
+        [
+          "    state = {k: v.detach().cpu() for k, v in model.state_dict().items()}",
+          "    state = {k: v.detach().cpu() for k, v in ema_state.items()}"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Raise AdamW learning rate to converge faster within the fixed time budget.</rationale>\n<edit>\n<search>    opt = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.0)</search>\n<replace>    opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.0)</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>Add budget-aware cosine learning-rate decay to stabilize late training.</rationale>\n<edit>\n<search>import argparse\nimport json\nimport os\nimport time</search>\n<replace>import argparse\nimport json\nimport math\nimport os\nimport time</replace>\n</edit>\n<edit>\n<search>        opt.zero_grad()\n        loss.backward()\n        opt.step()\n        step += 1</search>\n<replace>        frac = min(1.0, max(0.0, (time.time() - start) / max(stop_at, 1e-6)))\n        lr_mult = 0.5 * (1.0 + math.cos(math.pi * frac))\n        for pg in opt.param_groups:\n            pg[\"lr\"] = 1e-4 * (0.05 + 0.95 * lr_mult)\n        opt.zero_grad()\n        loss.backward()\n        opt.step()\n        step += 1</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Increase batch size to reduce gradient noise and improve throughput on CPU.</rationale>\n<edit>\n<search>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)</search>\n<replace>        idx = torch.from_numpy(rng.integers(0, N, 1024)).to(device)</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>Add exponential moving average of weights for better generalization at test time.</rationale>\n<edit>\n<search>    opt = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.0)</search>\n<replace>    opt = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.0)\n    ema_decay = 0.999\n    ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}</replace>\n</edit>\n<edit>\n<search>        opt.zero_grad()\n        loss.backward()\n        opt.step()\n        step += 1</search>\n<replace>        opt.zero_grad()\n        loss.backward()\n        opt.step()\n        with torch.no_grad():\n            for k, v in model.state_dict().items():\n                ema_state[k].mul_(ema_decay).add_(v.detach(), alpha=1.0 - ema_decay)\n        step += 1</replace>\n</edit>\n<edit>\n<search>    state = {k: v.detach().cpu() for k, v in model.state_dict().items()}</search>\n<replace>    state = {k: v.detach().cpu() for k, v in ema_state.items()}</replace>\n</edit>\n</candidate>"
+  ]
+}

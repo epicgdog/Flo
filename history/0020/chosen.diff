@@ -1,0 +1,14 @@
+diff --git a/candidate/train.py b/candidate/train.py
+index bf17144..2d16ba2 100644
+--- a/candidate/train.py
++++ b/candidate/train.py
+@@ -111,7 +111,8 @@ def main():
+     while time.time() - start < stop_at:
+         idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)
+         x1 = X1[idx]
+-        c = C[idx]
++        c = C[idx].clone()
++        c[:, :34] = c[:, :34] + torch.randn_like(c[:, :34]) * 0.015 * c[:, 34:51].repeat_interleave(2, dim=1)
+         x0 = torch.randn_like(x1)
+         t = torch.sigmoid(torch.randn(x1.shape[0], device=device))
+         xt = (1 - t[:, None]) * x0 + t[:, None] * x1

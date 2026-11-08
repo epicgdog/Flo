@@ -1,0 +1,192 @@
+{
+  "reports": [
+    {
+      "iter_id": "0000",
+      "set": "dev",
+      "seed": 0,
+      "status": "ok",
+      "score": 77.91010583659828,
+      "error": null,
+      "metrics": {
+        "mpjpe_mm": 77.91010583659828,
+        "pa_mpjpe_mm": 55.92151284896575,
+        "best_of_k_mm": 66.26172697740341,
+        "spread_mm": 53.910863349723805,
+        "bone_err": 0.1073730443019471
+      },
+      "train": {
+        "steps": 68401,
+        "final_loss": 0.05540819899344505,
+        "elapsed_s": 176.29,
+        "killed_early": false
+      },
+      "params": 1692211,
+      "skeletons_png": "runs/work/0000_dev_0/skeletons.png"
+    },
+    {
+      "iter_id": "0000",
+      "set": "dev",
+      "seed": 1,
+      "status": "ok",
+      "score": 78.27491942037138,
+      "error": null,
+      "metrics": {
+        "mpjpe_mm": 78.27491942037138,
+        "pa_mpjpe_mm": 56.55594658601819,
+        "best_of_k_mm": 66.72690625277531,
+        "spread_mm": 53.73509675544477,
+        "bone_err": 0.11088085767396386
+      },
+      "train": {
+        "steps": 66988,
+        "final_loss": 0.055615988357107064,
+        "elapsed_s": 176.48,
+        "killed_early": false
+      },
+      "params": 1692211,
+      "skeletons_png": "runs/work/0000_dev_1/skeletons.png"
+    },
+    {
+      "iter_id": "0000",
+      "set": "dev",
+      "seed": 2,
+      "status": "ok",
+      "score": 76.90803026061624,
+      "error": null,
+      "metrics": {
+        "mpjpe_mm": 76.90803026061624,
+        "pa_mpjpe_mm": 56.16209151919882,
+        "best_of_k_mm": 65.33880290265088,
+        "spread_mm": 52.81154609430101,
+        "bone_err": 0.11097381726766804
+      },
+      "train": {
+        "steps": 67698,
+        "final_loss": 0.055777302445852515,
+        "elapsed_s": 176.49,
+        "killed_early": false
+      },
+      "params": 1692211,
+      "skeletons_png": "runs/work/0000_dev_2/skeletons.png"
+    },
+    {
+      "iter_id": "0000",
+      "set": "dev",
+      "seed": 3,
+      "status": "ok",
+      "score": 76.8820835460936,
+      "error": null,
+      "metrics": {
+        "mpjpe_mm": 76.8820835460936,
+        "pa_mpjpe_mm": 55.63150107439237,
+        "best_of_k_mm": 65.31077561499555,
+        "spread_mm": 52.146244981066765,
+        "bone_err": 0.10833390765196381
+      },
+      "train": {
+        "steps": 66737,
+        "final_loss": 0.05557769007270129,
+        "elapsed_s": 176.36,
+        "killed_early": false
+      },
+      "params": 1692211,
+      "skeletons_png": "runs/work/0000_dev_3/skeletons.png"
+    },
+    {
+      "iter_id": "0000",
+      "set": "heldout",
+      "seed": 0,
+      "status": "ok",
+      "score": 118.70160989124437,
+      "error": null,
+      "metrics": {
+        "mpjpe_mm": 118.70160989124437,
+        "pa_mpjpe_mm": 77.40133635004739,
+        "best_of_k_mm": 100.53603843126629,
+        "spread_mm": 77.58778695909697,
+        "bone_err": 0.14507247905809362
+      },
+      "train": {
+        "steps": 66369,
+        "final_loss": 0.0556821560638807,
+        "elapsed_s": 176.6,
+        "killed_early": false
+      },
+      "params": 1692211,
+      "skeletons_png": "runs/work/0000_heldout_0/skeletons.png"
+    },
+    {
+      "iter_id": "0000",
+      "set": "heldout",
+      "seed": 1,
+      "status": "ok",
+      "score": 117.03720175255849,
+      "error": null,
+      "metrics": {
+        "mpjpe_mm": 117.03720175255849,
+        "pa_mpjpe_mm": 76.73891457815374,
+        "best_of_k_mm": 99.97373846410329,
+        "spread_mm": 75.65236580960496,
+        "bone_err": 0.12685409629355265
+      },
+      "train": {
+        "steps": 65648,
+        "final_loss": 0.0556790216644605,
+        "elapsed_s": 176.36,
+        "killed_early": false
+      },
+      "params": 1692211,
+      "skeletons_png": "runs/work/0000_heldout_1/skeletons.png"
+    },
+    {
+      "iter_id": "0000",
+      "set": "heldout",
+      "seed": 2,
+      "status": "ok",
+      "score": 118.52948819668069,
+      "error": null,
+      "metrics": {
+        "mpjpe_mm": 118.52948819668069,
+        "pa_mpjpe_mm": 76.7662864217382,
+        "best_of_k_mm": 101.14949785831502,
+        "spread_mm": 72.71851073314923,
+        "bone_err": 0.1299428037256434
+      },
+      "train": {
+        "steps": 66422,
+        "final_loss": 0.056157987474707974,
+        "elapsed_s": 176.35,
+        "killed_early": false
+      },
+      "params": 1692211,
+      "skeletons_png": "runs/work/0000_heldout_2/skeletons.png"
+    },
+    {
+      "iter_id": "0000",
+      "set": "heldout",
+      "seed": 3,
+      "status": "ok",
+      "score": 114.94016038597665,
+      "error": null,
+      "metrics": {
+        "mpjpe_mm": 114.94016038597665,
+        "pa_mpjpe_mm": 76.3535187618351,
+        "best_of_k_mm": 97.44018604112009,
+        "spread_mm": 75.7499925432979,
+        "bone_err": 0.13755531252489056
+      },
+      "train": {
+        "steps": 65870,
+        "final_loss": 0.0558252329869372,
+        "elapsed_s": 176.55,
+        "killed_early": false
+      },
+      "params": 1692211,
+      "skeletons_png": "runs/work/0000_heldout_3/skeletons.png"
+    }
+  ],
+  "mean_dev": 77.49378476591987,
+  "mean_heldout": 117.30211505661505,
+  "sigma_dev": 0.7072909125897996,
+  "sigma_heldout": 1.7429897247665616
+}

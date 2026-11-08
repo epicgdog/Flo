@@ -1,0 +1,113 @@
+[
+  {
+    "decision": "route",
+    "options": [
+      "tune_optimizer",
+      "timestep_sampling",
+      "architecture",
+      "conditioning",
+      "loss_and_target",
+      "regularization",
+      "fix_last_failure"
+    ],
+    "choice": "tune_optimizer",
+    "used_fallback": true,
+    "latency_s": 0.0
+  },
+  {
+    "decision": "rank",
+    "options": [
+      "0",
+      "1",
+      "2",
+      "3"
+    ],
+    "choice": "0",
+    "used_fallback": true,
+    "latency_s": 0.0
+  },
+  {
+    "decision": "rank",
+    "options": [
+      "1",
+      "2",
+      "3"
+    ],
+    "choice": "1",
+    "used_fallback": true,
+    "latency_s": 0.0
+  },
+  {
+    "decision": "rank",
+    "options": [
+      "2",
+      "3"
+    ],
+    "choice": "2",
+    "used_fallback": true,
+    "latency_s": 0.0
+  },
+  {
+    "decision": "rank",
+    "options": [
+      "3"
+    ],
+    "choice": "3",
+    "used_fallback": true,
+    "latency_s": 0.0
+  },
+  {
+    "decision": "should_stop",
+    "options": [
+      "continue",
+      "stop"
+    ],
+    "choice": "continue",
+    "used_fallback": true,
+    "latency_s": 0.0
+  },
+  {
+    "decision": "should_stop",
+    "options": [
+      "continue",
+      "stop"
+    ],
+    "choice": "continue",
+    "used_fallback": true,
+    "latency_s": 0.0
+  },
+  {
+    "decision": "should_stop",
+    "options": [
+      "continue",
+      "stop"
+    ],
+    "choice": "continue",
+    "used_fallback": true,
+    "latency_s": 0.0
+  },
+  {
+    "decision": "should_stop",
+    "options": [
+      "continue",
+      "stop"
+    ],
+    "choice": "continue",
+    "used_fallback": true,
+    "latency_s": 0.0
+  },
+  {
+    "decision": "triage",
+    "options": [
+      "crash",
+      "timeout",
+      "diverged",
+      "implausible_pose",
+      "no_gain",
+      "heldout_regression"
+    ],
+    "choice": "no_gain",
+    "used_fallback": true,
+    "latency_s": 0.0
+  }
+]

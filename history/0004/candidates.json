@@ -1,0 +1,59 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Zero out invisible 2D joints so occluded detections do not leak noise while keeping the mask as signal.",
+      "edits": [
+        [
+          "    C_np = np.concatenate([kp, mk, fr], axis=1).astype(np.float32)      # (N,54) condition",
+          "    kp_m = (kp.reshape(-1, 17, 2) * mk.reshape(-1, 17, 1)).reshape(-1, 34)\n    C_np = np.concatenate([kp_m, mk, fr], axis=1).astype(np.float32)      # (N,54) condition"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "Encode each joint's x,y,mask together with a shared MLP to respect joint structure before mixing.",
+      "edits": [
+        [
+          "    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))",
+          "    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.joint_enc = nn.Sequential(nn.Linear(3, 32), nn.GELU(), nn.Linear(32, 32))\n        self.inp = nn.Linear(51 + 17 * 32 + 3 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        kp = c[:, :34].reshape(-1, 17, 2)\n        m = c[:, 34:51].unsqueeze(-1)\n        fr = c[:, 51:]\n        jf = self.joint_enc(torch.cat([kp, m], dim=-1)).reshape(-1, 17 * 32)\n        h = torch.cat([x, jf, fr, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Fourier-lift 2D coordinates and frame with sin/cos at pi and 2pi to linearize perspective geometry.",
+      "edits": [
+        [
+          "    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))",
+          "    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 202 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        kp = c[:, :34]\n        m = c[:, 34:51]\n        fr = c[:, 51:]\n        def enc(v):\n            return torch.cat([v, torch.sin(3.14159 * v), torch.cos(3.14159 * v), torch.sin(6.28318 * v), torch.cos(6.28318 * v)], dim=1)\n        ce = torch.cat([enc(kp), m, enc(fr)], dim=1)\n        h = torch.cat([x, ce, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "Feed the condition via FiLM scale-shift modulation instead of raw input concatenation for stronger control.",
+      "edits": [
+        [
+          "    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))",
+          "    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 64, width)\n        self.cmlp = nn.Sequential(nn.Linear(54, width), nn.GELU(), nn.Linear(width, width * 2))\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, sinusoidal(t)], dim=1)\n        h = self.inp(h)\n        g, b = self.cmlp(c).chunk(2, dim=1)\n        h = h * (1 + g) + b\n        return self.out(self.blocks(h))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Zero out invisible 2D joints so occluded detections do not leak noise while keeping the mask as signal.</rationale>\n<edit>\n<search>    C_np = np.concatenate([kp, mk, fr], axis=1).astype(np.float32)      # (N,54) condition</search>\n<replace>    kp_m = (kp.reshape(-1, 17, 2) * mk.reshape(-1, 17, 1)).reshape(-1, 34)\n    C_np = np.concatenate([kp_m, mk, fr], axis=1).astype(np.float32)      # (N,54) condition</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>Encode each joint's x,y,mask together with a shared MLP to respect joint structure before mixing.</rationale>\n<edit>\n<search>    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</search>\n<replace>    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.joint_enc = nn.Sequential(nn.Linear(3, 32), nn.GELU(), nn.Linear(32, 32))\n        self.inp = nn.Linear(51 + 17 * 32 + 3 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        kp = c[:, :34].reshape(-1, 17, 2)\n        m = c[:, 34:51].unsqueeze(-1)\n        fr = c[:, 51:]\n        jf = self.joint_enc(torch.cat([kp, m], dim=-1)).reshape(-1, 17 * 32)\n        h = torch.cat([x, jf, fr, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Fourier-lift 2D coordinates and frame with sin/cos at pi and 2pi to linearize perspective geometry.</rationale>\n<edit>\n<search>    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</search>\n<replace>    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 202 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        kp = c[:, :34]\n        m = c[:, 34:51]\n        fr = c[:, 51:]\n        def enc(v):\n            return torch.cat([v, torch.sin(3.14159 * v), torch.cos(3.14159 * v), torch.sin(6.28318 * v), torch.cos(6.28318 * v)], dim=1)\n        ce = torch.cat([enc(kp), m, enc(fr)], dim=1)\n        h = torch.cat([x, ce, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>Feed the condition via FiLM scale-shift modulation instead of raw input concatenation for stronger control.</rationale>\n<edit>\n<search>    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</search>\n<replace>    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 64, width)\n        self.cmlp = nn.Sequential(nn.Linear(54, width), nn.GELU(), nn.Linear(width, width * 2))\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, sinusoidal(t)], dim=1)\n        h = self.inp(h)\n        g, b = self.cmlp(c).chunk(2, dim=1)\n        h = h * (1 + g) + b\n        return self.out(self.blocks(h))</replace>\n</edit>\n</candidate>"
+  ]
+}

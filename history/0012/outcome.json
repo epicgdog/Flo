@@ -1,0 +1,17 @@
+{
+  "iter_id": "0012",
+  "strategy": "loss_and_target",
+  "rationale": "Replacing velocity MSE with Euclidean error on the implied clean pose directly optimizes the per-joint 3D distance used for evaluation.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 72.48521161160882,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 72.46281155375125,
+  "best_heldout_before": 113.31706559114292,
+  "triage": "no_gain",
+  "lesson": "Replacing velocity MSE with Euclidean loss on the implied clean pose gave +0.0 mm: directly matching the eval metric doesn't beat velocity-space training.",
+  "duration_s": 206.6,
+  "llm_tokens": 5638
+}

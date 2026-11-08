@@ -1,0 +1,17 @@
+{
+  "iter_id": "0013",
+  "strategy": "regularization",
+  "rationale": "Dropout inside each residual block should reduce co-adaptation and overfitting to training poses without changing the model interface or parameter count.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 76.08634400681586,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 72.46281155375125,
+  "best_heldout_before": 113.31706559114292,
+  "triage": "no_gain",
+  "lesson": "Dropout inside each residual block didn't reduce pose overfitting (dev +3.6 mm, rejected); no gain despite unchanged interface/params\u2014avoid intra-block dropout for this regularization.",
+  "duration_s": 225.6,
+  "llm_tokens": 7800
+}

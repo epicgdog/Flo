@@ -1,0 +1,1 @@
+Sample t from logit-normal to focus on hard intermediate timesteps; dev error -2.7 mm — use for velocity training.

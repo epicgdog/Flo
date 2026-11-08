@@ -1,0 +1,59 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Sample t from logit-normal to focus training on intermediate timesteps where the velocity is hardest to learn.",
+      "edits": [
+        [
+          "        x0 = torch.randn_like(x1)\n        t = torch.rand(x1.shape[0], device=device)\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1",
+          "        x0 = torch.randn_like(x1)\n        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "Use stratified timestep sampling to guarantee uniform coverage of t in every batch and reduce gradient variance.",
+      "edits": [
+        [
+          "        x0 = torch.randn_like(x1)\n        t = torch.rand(x1.shape[0], device=device)\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1",
+          "        x0 = torch.randn_like(x1)\n        t = (torch.arange(x1.shape[0], device=device).float() + torch.rand(x1.shape[0], device=device)) / x1.shape[0]\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Skew sampling toward t near 1 where fine pose details are resolved for lower final reconstruction error.",
+      "edits": [
+        [
+          "        x0 = torch.randn_like(x1)\n        t = torch.rand(x1.shape[0], device=device)\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1",
+          "        x0 = torch.randn_like(x1)\n        t = torch.sqrt(torch.rand(x1.shape[0], device=device))\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "Truncate uniform sampling away from exact 0 and 1 to avoid unstable low-signal targets at the path endpoints.",
+      "edits": [
+        [
+          "        x0 = torch.randn_like(x1)\n        t = torch.rand(x1.shape[0], device=device)\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1",
+          "        x0 = torch.randn_like(x1)\n        t = 0.02 + 0.96 * torch.rand(x1.shape[0], device=device)\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Sample t from logit-normal to focus training on intermediate timesteps where the velocity is hardest to learn.</rationale>\n<edit>\n<search>        x0 = torch.randn_like(x1)\n        t = torch.rand(x1.shape[0], device=device)\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1</search>\n<replace>        x0 = torch.randn_like(x1)\n        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>Use stratified timestep sampling to guarantee uniform coverage of t in every batch and reduce gradient variance.</rationale>\n<edit>\n<search>        x0 = torch.randn_like(x1)\n        t = torch.rand(x1.shape[0], device=device)\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1</search>\n<replace>        x0 = torch.randn_like(x1)\n        t = (torch.arange(x1.shape[0], device=device).float() + torch.rand(x1.shape[0], device=device)) / x1.shape[0]\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Skew sampling toward t near 1 where fine pose details are resolved for lower final reconstruction error.</rationale>\n<edit>\n<search>        x0 = torch.randn_like(x1)\n        t = torch.rand(x1.shape[0], device=device)\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1</search>\n<replace>        x0 = torch.randn_like(x1)\n        t = torch.sqrt(torch.rand(x1.shape[0], device=device))\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>Truncate uniform sampling away from exact 0 and 1 to avoid unstable low-signal targets at the path endpoints.</rationale>\n<edit>\n<search>        x0 = torch.randn_like(x1)\n        t = torch.rand(x1.shape[0], device=device)\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1</search>\n<replace>        x0 = torch.randn_like(x1)\n        t = 0.02 + 0.96 * torch.rand(x1.shape[0], device=device)\n        xt = (1 - t[:, None]) * x0 + t[:, None] * x1</replace>\n</edit>\n</candidate>"
+  ]
+}

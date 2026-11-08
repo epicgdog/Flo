@@ -1,0 +1,17 @@
+{
+  "iter_id": "0010",
+  "strategy": "architecture",
+  "rationale": "Per-joint tokens with self-attention exploit skeleton structure and joint-to-joint dependencies instead of treating the pose as a flat vector.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 84.51195710235936,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 72.46281155375125,
+  "best_heldout_before": 113.31706559114292,
+  "triage": "no_gain",
+  "lesson": "Lesson: Per-joint tokens with self-attention for skeleton structure/joint dependencies gave no gain vs a flat pose vector, worsening dev error by +12.0 mm; avoid this architecture.",
+  "duration_s": 234.2,
+  "llm_tokens": 6875
+}

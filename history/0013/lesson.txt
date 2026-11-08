@@ -1,0 +1,1 @@
+Dropout inside each residual block didn't reduce pose overfitting (dev +3.6 mm, rejected); no gain despite unchanged interface/params—avoid intra-block dropout for this regularization.

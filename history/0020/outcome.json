@@ -1,0 +1,17 @@
+{
+  "iter_id": "0020",
+  "strategy": "regularization",
+  "rationale": "Adding small Gaussian noise only to visible 2D keypoints regularizes against detector localization error on unseen data.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 70.80780374754839,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 67.59418680425208,
+  "best_heldout_before": 99.45541594268263,
+  "triage": "no_gain",
+  "lesson": "Lesson: Adding small Gaussian noise only to visible 2D keypoints gave no gain (+3.2 mm dev worsening), so it doesn't regularize against detector localization error on unseen data.",
+  "duration_s": 209.5,
+  "llm_tokens": 6980
+}

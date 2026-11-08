@@ -1,0 +1,47 @@
+diff --git a/candidate/train.py b/candidate/train.py
+index d4a9bed..252e376 100644
+--- a/candidate/train.py
++++ b/candidate/train.py
+@@ -26,27 +26,25 @@ def sinusoidal(t, dim=64):
+     return torch.cat([torch.sin(args), torch.cos(args)], dim=1)
+ 
+ 
+-class Block(nn.Module):
+-    def __init__(self, width):
+-        super().__init__()
+-        self.net = nn.Sequential(
+-            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Linear(width, width)
+-        )
+-
+-    def forward(self, h):
+-        return h + self.net(h)
+-
+-
+ class Net(nn.Module):
+-    def __init__(self, width=512, blocks=3):
++    def __init__(self, width=256, blocks=3):
+         super().__init__()
+-        self.inp = nn.Linear(51 + 54 + 64, width)
+-        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])
+-        self.out = nn.Linear(width, 51)
++        self.joint_emb = nn.Parameter(torch.randn(17, width) * 0.02)
++        self.in_joint = nn.Linear(3 + 2 + 1, width)
++        self.global_in = nn.Linear(3 + 64, width)
++        layer = nn.TransformerEncoderLayer(d_model=width, nhead=4, dim_feedforward=width * 2, batch_first=True, activation="gelu", norm_first=True)
++        self.blocks = nn.TransformerEncoder(layer, num_layers=blocks)
++        self.norm = nn.LayerNorm(width)
++        self.out = nn.Linear(width, 3)
+ 
+     def forward(self, x, t, c):
+-        h = torch.cat([x, c, sinusoidal(t)], dim=1)
+-        return self.out(self.blocks(self.inp(h)))
++        xj = x.reshape(-1, 17, 3)
++        kp = c[:, :34].reshape(-1, 17, 2)
++        mk = c[:, 34:51].reshape(-1, 17, 1)
++        fr = c[:, 51:54]
++        h = self.in_joint(torch.cat([xj, kp, mk], dim=-1)) + self.joint_emb[None, :, :]
++        h = h + self.global_in(torch.cat([fr, sinusoidal(t)], dim=1))[:, None, :]
++        return self.out(self.norm(self.blocks(h))).reshape(-1, 51)
+ 
+ 
+ def load(path):

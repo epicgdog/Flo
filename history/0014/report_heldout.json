@@ -1,0 +1,23 @@
+{
+  "iter_id": "0014",
+  "set": "heldout",
+  "seed": 0,
+  "status": "ok",
+  "score": 104.32786768072938,
+  "error": null,
+  "metrics": {
+    "mpjpe_mm": 104.32786768072938,
+    "pa_mpjpe_mm": 68.28673623992789,
+    "best_of_k_mm": 89.65174363166565,
+    "spread_mm": 56.61355844745512,
+    "bone_err": 0.11225611633899095
+  },
+  "train": {
+    "steps": 55957,
+    "final_loss": 0.02125953925507409,
+    "elapsed_s": 176.42,
+    "killed_early": false
+  },
+  "params": 1692211,
+  "skeletons_png": "history/0014/skeletons_heldout.png"
+}

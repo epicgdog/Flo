@@ -1,0 +1,15 @@
+diff --git a/candidate/train.py b/candidate/train.py
+index d4a9bed..c69aa6a 100644
+--- a/candidate/train.py
++++ b/candidate/train.py
+@@ -110,7 +110,9 @@ def main():
+         xt = (1 - t[:, None]) * x0 + t[:, None] * x1
+         target = x1 - x0
+         v = model(xt, t, c)
+-        loss = ((v - target) ** 2).mean()
++        x1_hat = xt + (1 - t[:, None]) * v
++        per_joint = torch.sqrt(((x1_hat - x1) ** 2).reshape(-1, 17, 3).sum(dim=2) + 1e-8)
++        loss = per_joint.mean()
+         opt.zero_grad()
+         loss.backward()
+         opt.step()

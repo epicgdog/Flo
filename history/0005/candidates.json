@@ -1,0 +1,59 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Weight velocity loss by 2D visibility so occluded joints contribute less noise while visible joints dominate.",
+      "edits": [
+        [
+          "        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        loss = ((v - target) ** 2).mean()",
+          "        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        se = ((v - target) ** 2).view(-1, 17, 3).mean(dim=2)\n        m = c[:, 34:51]\n        w = 0.5 + 0.5 * m\n        loss = (se * w).mean()"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "Replace MSE with Huber loss to reduce sensitivity to 3D outliers and stabilize velocity learning.",
+      "edits": [
+        [
+          "        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        loss = ((v - target) ** 2).mean()",
+          "        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        err = v - target\n        loss = torch.where(err.abs() < 1.0, 0.5 * err * err, err.abs() - 0.5).mean()"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Supervise the endpoint reconstruction implied by the velocity to directly optimize clean pose accuracy.",
+      "edits": [
+        [
+          "        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        loss = ((v - target) ** 2).mean()",
+          "        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        x1_hat = xt + (1.0 - t[:, None]) * v\n        loss = ((x1_hat - x1) ** 2).mean()"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "Reweight the velocity loss by timestep to emphasize hard intermediate t where the flow is most uncertain.",
+      "edits": [
+        [
+          "        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        loss = ((v - target) ** 2).mean()",
+          "        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        w = 0.2 + 0.8 * torch.sin(t * 3.14159265).clamp(min=0.0)\n        loss = ((((v - target) ** 2).mean(dim=1)) * w).mean()"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Weight velocity loss by 2D visibility so occluded joints contribute less noise while visible joints dominate.</rationale>\n<edit>\n<search>        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        loss = ((v - target) ** 2).mean()</search>\n<replace>        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        se = ((v - target) ** 2).view(-1, 17, 3).mean(dim=2)\n        m = c[:, 34:51]\n        w = 0.5 + 0.5 * m\n        loss = (se * w).mean()</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>Replace MSE with Huber loss to reduce sensitivity to 3D outliers and stabilize velocity learning.</rationale>\n<edit>\n<search>        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        loss = ((v - target) ** 2).mean()</search>\n<replace>        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        err = v - target\n        loss = torch.where(err.abs() < 1.0, 0.5 * err * err, err.abs() - 0.5).mean()</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Supervise the endpoint reconstruction implied by the velocity to directly optimize clean pose accuracy.</rationale>\n<edit>\n<search>        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        loss = ((v - target) ** 2).mean()</search>\n<replace>        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        x1_hat = xt + (1.0 - t[:, None]) * v\n        loss = ((x1_hat - x1) ** 2).mean()</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>Reweight the velocity loss by timestep to emphasize hard intermediate t where the flow is most uncertain.</rationale>\n<edit>\n<search>        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        loss = ((v - target) ** 2).mean()</search>\n<replace>        xt = (1 - t[:, None]) * x0 + t[:, None] * x1\n        target = x1 - x0\n        v = model(xt, t, c)\n        w = 0.2 + 0.8 * torch.sin(t * 3.14159265).clamp(min=0.0)\n        loss = ((((v - target) ** 2).mean(dim=1)) * w).mean()</replace>\n</edit>\n</candidate>"
+  ]
+}

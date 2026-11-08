@@ -6,3 +6,5 @@ data/
 runs/
 history/**/*.pt
 history_data1/
+dashboard/web/node_modules/
+dashboard/web/dist/

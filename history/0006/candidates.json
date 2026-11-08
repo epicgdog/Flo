@@ -1,0 +1,59 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Add AdamW weight decay to penalize large weights and reduce overfitting to training poses.",
+      "edits": [
+        [
+          "    opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.0)",
+          "    opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-2)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "Add dropout inside residual blocks to regularize co-adapted features and improve generalization.",
+      "edits": [
+        [
+          "class Block(nn.Module):\n    def __init__(self, width):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Linear(width, width)\n        )",
+          "class Block(nn.Module):\n    def __init__(self, width, p=0.1):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Dropout(p), nn.Linear(width, width), nn.Dropout(p)\n        )"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Jitter normalized 2D keypoints with small Gaussian noise to tolerate detector noise on unseen data.",
+      "edits": [
+        [
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]",
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx].clone()\n        c[:, :34] = c[:, :34] + 0.01 * torch.randn_like(c[:, :34])"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "Randomly occlude extra joints during training to regularize against missing detections and force use of pose prior.",
+      "edits": [
+        [
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]",
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx].clone()\n        drop = torch.rand_like(c[:, 34:51]) < 0.05\n        c[:, :34].masked_fill_(drop.repeat_interleave(2, dim=1), 0.0)\n        c[:, 34:51].masked_fill_(drop, 0.0)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Add AdamW weight decay to penalize large weights and reduce overfitting to training poses.</rationale>\n<edit>\n<search>    opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.0)</search>\n<replace>    opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-2)</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>Add dropout inside residual blocks to regularize co-adapted features and improve generalization.</rationale>\n<edit>\n<search>class Block(nn.Module):\n    def __init__(self, width):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Linear(width, width)\n        )</search>\n<replace>class Block(nn.Module):\n    def __init__(self, width, p=0.1):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Dropout(p), nn.Linear(width, width), nn.Dropout(p)\n        )</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Jitter normalized 2D keypoints with small Gaussian noise to tolerate detector noise on unseen data.</rationale>\n<edit>\n<search>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]</search>\n<replace>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx].clone()\n        c[:, :34] = c[:, :34] + 0.01 * torch.randn_like(c[:, :34])</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>Randomly occlude extra joints during training to regularize against missing detections and force use of pose prior.</rationale>\n<edit>\n<search>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]</search>\n<replace>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx].clone()\n        drop = torch.rand_like(c[:, 34:51]) < 0.05\n        c[:, :34].masked_fill_(drop.repeat_interleave(2, dim=1), 0.0)\n        c[:, 34:51].masked_fill_(drop, 0.0)</replace>\n</edit>\n</candidate>"
+  ]
+}

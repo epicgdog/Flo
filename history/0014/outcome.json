@@ -1,0 +1,17 @@
+{
+  "iter_id": "0014",
+  "strategy": "fix_last_failure",
+  "rationale": "An exponential moving average of weights should give a smoother, better-generalizing flow model at sampling time at no extra parameter cost.",
+  "accepted": true,
+  "reason": null,
+  "tag": "v3",
+  "dev": 69.06463759145409,
+  "dev2": 69.53440583079552,
+  "heldout": 104.32786768072938,
+  "best_dev_before": 72.46281155375125,
+  "best_heldout_before": 113.31706559114292,
+  "triage": null,
+  "lesson": "Lesson: Use an EMA of weights at sampling time for the flow model\u2014smoother, better-generalizing output at no extra parameter cost; accepted, dev improved by -3.4 mm.",
+  "duration_s": 560.0,
+  "llm_tokens": 6033
+}

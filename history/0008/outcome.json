@@ -1,0 +1,17 @@
+{
+  "iter_id": "0008",
+  "strategy": "tune_optimizer",
+  "rationale": "Raising AdamW to 1e-3 should converge substantially further within the fixed time budget without destabilizing this LayerNorm MLP.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 74.33779597826087,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 72.46281155375125,
+  "best_heldout_before": 113.31706559114292,
+  "triage": "no_gain",
+  "lesson": "Raising AdamW to 1e-3 for this LayerNorm MLP gave only +1.9 mm dev gain in the fixed budget (rejected: no_gain), yielding no useful faster convergence.",
+  "duration_s": 205.8,
+  "llm_tokens": 5186
+}

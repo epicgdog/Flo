@@ -1,0 +1,75 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Cosine-decaying the learning rate to zero over the known time budget should settle the EMA weights into a better final minimum without changing the model.",
+      "edits": [
+        [
+          "import argparse\nimport json\nimport os",
+          "import argparse\nimport json\nimport math\nimport os"
+        ],
+        [
+          "        opt.zero_grad()\n        loss.backward()\n        opt.step()",
+          "        opt.zero_grad()\n        loss.backward()\n        opt.step()\n        progress = min(1.0, (time.time() - start) / max(stop_at, 1e-9))\n        for group in opt.param_groups:\n            group[\"lr\"] = 3e-4 * 0.5 * (1.0 + math.cos(math.pi * progress))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "Standardizing the heterogeneous condition features inside the network using dataset statistics stored as buffers should improve optimization while remaining available at load time.",
+      "edits": [
+        [
+          "class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)\n        self.blocks = nn.ModuleList([Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))",
+          "class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.register_buffer(\"c_mean\", torch.zeros(54))\n        self.register_buffer(\"c_std\", torch.ones(54))\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)\n        self.blocks = nn.ModuleList([Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        c = (c - self.c_mean) / self.c_std\n        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))"
+        ],
+        [
+          "    model = Net().to(device)\n    n_params = sum(p.numel() for p in model.parameters())",
+          "    model = Net().to(device)\n    with torch.no_grad():\n        model.c_mean.copy_(C.mean(dim=0))\n        model.c_std.copy_(C.std(dim=0).clamp_min(1e-2))\n    n_params = sum(p.numel() for p in model.parameters())"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Standardizing each 3D joint coordinate inside the network and rescaling the predicted velocity back to meters should balance learning across joints with different pose variance.",
+      "edits": [
+        [
+          "class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)\n        self.blocks = nn.ModuleList([Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))\n        for block in self.blocks:\n            h = block(h, e)\n        return self.out(h)",
+          "class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.register_buffer(\"x_mean\", torch.zeros(51))\n        self.register_buffer(\"x_std\", torch.ones(51))\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)\n        self.blocks = nn.ModuleList([Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        x = (x - self.x_mean) / self.x_std\n        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))\n        for block in self.blocks:\n            h = block(h, e)\n        return self.out(h) * self.x_std"
+        ],
+        [
+          "    model = Net().to(device)\n    n_params = sum(p.numel() for p in model.parameters())",
+          "    model = Net().to(device)\n    with torch.no_grad():\n        model.x_mean.copy_(X1.mean(dim=0))\n        model.x_std.copy_(X1.std(dim=0).clamp_min(1e-2))\n    n_params = sum(p.numel() for p in model.parameters())"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "Random left-right mirroring with COCO joint swaps and negated 3D x-coordinates should provide physically consistent pose augmentation that improves generalization to unseen subjects.",
+      "edits": [
+        [
+          "    step = 0\n    window = []\n    last_loss = None\n\n    while time.time() - start < stop_at:",
+          "    step = 0\n    window = []\n    last_loss = None\n    joint_perm = torch.tensor([0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15], device=device)\n    flip_center = 0.5 if float(C_np[:, 0:34:2].mean()) > 0.25 else 0.0\n\n    while time.time() - start < stop_at:"
+        ],
+        [
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]\n        x0 = torch.randn_like(x1)",
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]\n        flip = torch.from_numpy(rng.random(x1.shape[0]) < 0.5).to(device)\n        if flip.any():\n            kp_f = c[:, :34].reshape(-1, 17, 2)[:, joint_perm].clone()\n            kp_f[:, :, 0] = 2.0 * flip_center - kp_f[:, :, 0]\n            c_f = c.clone()\n            c_f[:, :34] = kp_f.reshape(-1, 34)\n            c_f[:, 34:51] = c[:, 34:51][:, joint_perm]\n            pose_f = x1.reshape(-1, 17, 3)[:, joint_perm].clone()\n            pose_f[:, :, 0] = -pose_f[:, :, 0]\n            c = torch.where(flip[:, None], c_f, c)\n            x1 = torch.where(flip[:, None], pose_f.reshape(-1, 51), x1)\n        x0 = torch.randn_like(x1)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Cosine-decaying the learning rate to zero over the known time budget should settle the EMA weights into a better final minimum without changing the model.</rationale>\n<edit>\n<search>import argparse\nimport json\nimport os</search>\n<replace>import argparse\nimport json\nimport math\nimport os</replace>\n</edit>\n<edit>\n<search>        opt.zero_grad()\n        loss.backward()\n        opt.step()</search>\n<replace>        opt.zero_grad()\n        loss.backward()\n        opt.step()\n        progress = min(1.0, (time.time() - start) / max(stop_at, 1e-9))\n        for group in opt.param_groups:\n            group[\"lr\"] = 3e-4 * 0.5 * (1.0 + math.cos(math.pi * progress))</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>Standardizing the heterogeneous condition features inside the network using dataset statistics stored as buffers should improve optimization while remaining available at load time.</rationale>\n<edit>\n<search>class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)\n        self.blocks = nn.ModuleList([Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))</search>\n<replace>class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.register_buffer(\"c_mean\", torch.zeros(54))\n        self.register_buffer(\"c_std\", torch.ones(54))\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)\n        self.blocks = nn.ModuleList([Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        c = (c - self.c_mean) / self.c_std\n        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))</replace>\n</edit>\n<edit>\n<search>    model = Net().to(device)\n    n_params = sum(p.numel() for p in model.parameters())</search>\n<replace>    model = Net().to(device)\n    with torch.no_grad():\n        model.c_mean.copy_(C.mean(dim=0))\n        model.c_std.copy_(C.std(dim=0).clamp_min(1e-2))\n    n_params = sum(p.numel() for p in model.parameters())</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Standardizing each 3D joint coordinate inside the network and rescaling the predicted velocity back to meters should balance learning across joints with different pose variance.</rationale>\n<edit>\n<search>class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)\n        self.blocks = nn.ModuleList([Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))\n        for block in self.blocks:\n            h = block(h, e)\n        return self.out(h)</search>\n<replace>class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.register_buffer(\"x_mean\", torch.zeros(51))\n        self.register_buffer(\"x_std\", torch.ones(51))\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)\n        self.blocks = nn.ModuleList([Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        x = (x - self.x_mean) / self.x_std\n        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))\n        for block in self.blocks:\n            h = block(h, e)\n        return self.out(h) * self.x_std</replace>\n</edit>\n<edit>\n<search>    model = Net().to(device)\n    n_params = sum(p.numel() for p in model.parameters())</search>\n<replace>    model = Net().to(device)\n    with torch.no_grad():\n        model.x_mean.copy_(X1.mean(dim=0))\n        model.x_std.copy_(X1.std(dim=0).clamp_min(1e-2))\n    n_params = sum(p.numel() for p in model.parameters())</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>Random left-right mirroring with COCO joint swaps and negated 3D x-coordinates should provide physically consistent pose augmentation that improves generalization to unseen subjects.</rationale>\n<edit>\n<search>    step = 0\n    window = []\n    last_loss = None\n\n    while time.time() - start < stop_at:</search>\n<replace>    step = 0\n    window = []\n    last_loss = None\n    joint_perm = torch.tensor([0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15], device=device)\n    flip_center = 0.5 if float(C_np[:, 0:34:2].mean()) > 0.25 else 0.0\n\n    while time.time() - start < stop_at:</replace>\n</edit>\n<edit>\n<search>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]\n        x0 = torch.randn_like(x1)</search>\n<replace>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]\n        flip = torch.from_numpy(rng.random(x1.shape[0]) < 0.5).to(device)\n        if flip.any():\n            kp_f = c[:, :34].reshape(-1, 17, 2)[:, joint_perm].clone()\n            kp_f[:, :, 0] = 2.0 * flip_center - kp_f[:, :, 0]\n            c_f = c.clone()\n            c_f[:, :34] = kp_f.reshape(-1, 34)\n            c_f[:, 34:51] = c[:, 34:51][:, joint_perm]\n            pose_f = x1.reshape(-1, 17, 3)[:, joint_perm].clone()\n            pose_f[:, :, 0] = -pose_f[:, :, 0]\n            c = torch.where(flip[:, None], c_f, c)\n            x1 = torch.where(flip[:, None], pose_f.reshape(-1, 51), x1)\n        x0 = torch.randn_like(x1)</replace>\n</edit>\n</candidate>"
+  ]
+}

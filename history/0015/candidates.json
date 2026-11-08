@@ -1,0 +1,59 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "An intermediate learning rate of 6e-4 may converge further than 3e-4 within the budget without the instability seen at 1e-3.",
+      "edits": [
+        [
+          "    opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.0)",
+          "    opt = torch.optim.AdamW(model.parameters(), lr=6e-4, weight_decay=0.0)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "A time-based cosine decay to 5% of the base learning rate should refine weights late in training as the fixed budget expires.",
+      "edits": [
+        [
+          "        v = model(xt, t, c)\n        loss = ((v - target) ** 2).mean()\n        opt.zero_grad()",
+          "        v = model(xt, t, c)\n        loss = ((v - target) ** 2).mean()\n        prog = min(1.0, (time.time() - start) / max(1.0, stop_at))\n        for g in opt.param_groups:\n            g[\"lr\"] = 3e-4 * (0.05 + 0.95 * 0.5 * (1.0 + float(np.cos(np.pi * prog))))\n        opt.zero_grad()"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Doubling the batch size to 512 gives smoother gradient estimates and better device utilization per optimizer step at unchanged learning rate.",
+      "edits": [
+        [
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)",
+          "        idx = torch.from_numpy(rng.integers(0, N, 512)).to(device)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "A slower EMA decay of 0.9995 averages over roughly twice as many steps, yielding smoother and better-generalizing final weights.",
+      "edits": [
+        [
+          "                    ema[k].mul_(0.999).add_(v.detach(), alpha=0.001)",
+          "                    ema[k].mul_(0.9995).add_(v.detach(), alpha=0.0005)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>An intermediate learning rate of 6e-4 may converge further than 3e-4 within the budget without the instability seen at 1e-3.</rationale>\n<edit>\n<search>    opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.0)</search>\n<replace>    opt = torch.optim.AdamW(model.parameters(), lr=6e-4, weight_decay=0.0)</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>A time-based cosine decay to 5% of the base learning rate should refine weights late in training as the fixed budget expires.</rationale>\n<edit>\n<search>        v = model(xt, t, c)\n        loss = ((v - target) ** 2).mean()\n        opt.zero_grad()</search>\n<replace>        v = model(xt, t, c)\n        loss = ((v - target) ** 2).mean()\n        prog = min(1.0, (time.time() - start) / max(1.0, stop_at))\n        for g in opt.param_groups:\n            g[\"lr\"] = 3e-4 * (0.05 + 0.95 * 0.5 * (1.0 + float(np.cos(np.pi * prog))))\n        opt.zero_grad()</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Doubling the batch size to 512 gives smoother gradient estimates and better device utilization per optimizer step at unchanged learning rate.</rationale>\n<edit>\n<search>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)</search>\n<replace>        idx = torch.from_numpy(rng.integers(0, N, 512)).to(device)</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>A slower EMA decay of 0.9995 averages over roughly twice as many steps, yielding smoother and better-generalizing final weights.</rationale>\n<edit>\n<search>                    ema[k].mul_(0.999).add_(v.detach(), alpha=0.001)</search>\n<replace>                    ema[k].mul_(0.9995).add_(v.detach(), alpha=0.0005)</replace>\n</edit>\n</candidate>"
+  ]
+}

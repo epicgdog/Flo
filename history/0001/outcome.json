@@ -1,0 +1,17 @@
+{
+  "iter_id": "0001",
+  "strategy": "tune_optimizer",
+  "rationale": "Raise AdamW learning rate to converge faster within the fixed time budget.",
+  "accepted": true,
+  "reason": null,
+  "tag": "v1",
+  "dev": 75.11961338687618,
+  "dev2": 74.69254760403554,
+  "heldout": 115.05005709533026,
+  "best_dev_before": 77.91010583659828,
+  "best_heldout_before": 118.70160989124437,
+  "triage": null,
+  "lesson": "Raising AdamW learning rate for faster convergence within fixed time budget succeeded (dev -2.8 mm).",
+  "duration_s": 557.2,
+  "llm_tokens": 5412
+}

@@ -1,0 +1,17 @@
+{
+  "iter_id": "0011",
+  "strategy": "conditioning",
+  "rationale": "Centering and scaling 2D keypoints by their mask-weighted centroid and spread inside the model removes image translation and scale variation while retaining position through the frame features.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 71.91702650891169,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 72.46281155375125,
+  "best_heldout_before": 113.31706559114292,
+  "triage": "no_gain",
+  "lesson": "Centering/scaling 2D keypoints by mask-weighted centroid/spread (keeping position via frame features) gave -0.5 mm on Dev: rejected; internal normalization adds no conditioning gain.",
+  "duration_s": 213.3,
+  "llm_tokens": 6111
+}

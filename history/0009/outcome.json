@@ -1,0 +1,17 @@
+{
+  "iter_id": "0009",
+  "strategy": "timestep_sampling",
+  "rationale": "Narrowing the logit-normal concentrates samples on the hardest mid-range timesteps where velocity prediction matters most.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 74.32960651067857,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 72.46281155375125,
+  "best_heldout_before": 113.31706559114292,
+  "triage": "no_gain",
+  "lesson": "Narrowing the logit-normal to concentrate on hard mid-range timesteps for velocity prediction gave no gain (+1.9 mm worse), so keep broader timestep sampling.",
+  "duration_s": 198.8,
+  "llm_tokens": 3769
+}

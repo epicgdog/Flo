@@ -1,0 +1,1 @@
+Huber velocity loss gave no gain (-0.9 mm, rejected): down-weighting rare extreme pose/occlusion outliers doesn't help; MSE's smooth gradients for typical errors suffice.

@@ -1,0 +1,23 @@
+{
+  "iter_id": "0011",
+  "set": "dev",
+  "seed": 0,
+  "status": "ok",
+  "score": 71.91702650891169,
+  "error": null,
+  "metrics": {
+    "mpjpe_mm": 71.91702650891169,
+    "pa_mpjpe_mm": 53.29596699413383,
+    "best_of_k_mm": 62.08085701991699,
+    "spread_mm": 43.166622159211514,
+    "bone_err": 0.11700761211579148
+  },
+  "train": {
+    "steps": 63826,
+    "final_loss": 0.02045053440782003,
+    "elapsed_s": 176.66,
+    "killed_early": false
+  },
+  "params": 1692211,
+  "skeletons_png": "history/0011/skeletons_dev.png"
+}

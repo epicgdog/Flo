@@ -1,0 +1,18 @@
+diff --git a/candidate/train.py b/candidate/train.py
+index d4a9bed..4437a4c 100644
+--- a/candidate/train.py
++++ b/candidate/train.py
+@@ -45,6 +45,14 @@ class Net(nn.Module):
+         self.out = nn.Linear(width, 51)
+ 
+     def forward(self, x, t, c):
++        kp = c[:, :34].reshape(-1, 17, 2)
++        mk = c[:, 34:51].reshape(-1, 17, 1)
++        w = mk / mk.sum(dim=1, keepdim=True).clamp(min=1.0)
++        cen = (kp * w).sum(dim=1, keepdim=True)
++        kp = kp - cen
++        scale = torch.sqrt(((kp ** 2).sum(dim=2, keepdim=True) * w).sum(dim=1, keepdim=True)).clamp(min=0.05)
++        kp = kp / scale
++        c = torch.cat([kp.reshape(-1, 34), c[:, 34:]], dim=1)
+         h = torch.cat([x, c, sinusoidal(t)], dim=1)
+         return self.out(self.blocks(self.inp(h)))

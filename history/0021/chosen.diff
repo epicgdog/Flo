@@ -1,0 +1,22 @@
+diff --git a/candidate/train.py b/candidate/train.py
+index bf17144..35691dc 100644
+--- a/candidate/train.py
++++ b/candidate/train.py
+@@ -6,6 +6,7 @@ Writes inside --out: model.pt, model_def.py, train_log.jsonl.
+ """
+ import argparse
+ import json
++import math
+ import os
+ import time
+ 
+@@ -121,6 +122,9 @@ def main():
+         opt.zero_grad()
+         loss.backward()
+         opt.step()
++        progress = min(1.0, (time.time() - start) / max(stop_at, 1e-9))
++        for group in opt.param_groups:
++            group["lr"] = 3e-4 * 0.5 * (1.0 + math.cos(math.pi * progress))
+         with torch.no_grad():
+             for k, v in model.state_dict().items():
+                 if ema[k].is_floating_point():

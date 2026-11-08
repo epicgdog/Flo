@@ -1,0 +1,59 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Broadening the logit-normal beyond sigma=1 adds endpoint coverage, the opposite direction of the failed narrowing attempt.",
+      "edits": [
+        [
+          "        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))",
+          "        t = torch.sigmoid(1.5 * torch.randn(x1.shape[0], device=device))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "A uniform/logit-normal mixture retains mid-timestep focus while guaranteeing regular training at the ODE trajectory endpoints.",
+      "edits": [
+        [
+          "        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))",
+          "        t_ln = torch.sigmoid(torch.randn(x1.shape[0], device=device))\n        t = torch.where(torch.rand_like(t_ln) < 0.5, torch.rand_like(t_ln), t_ln)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Shifting the logit-normal toward noisy low-t timesteps emphasizes learning the condition-driven global pose structure formed early in integration.",
+      "edits": [
+        [
+          "        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))",
+          "        t = torch.sigmoid(torch.randn(x1.shape[0], device=device) - 0.5)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "Antithetic mirrored t pairs balance low and high timesteps in every batch, reducing timestep-sampling gradient variance at no extra cost.",
+      "edits": [
+        [
+          "        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))",
+          "        t_half = torch.sigmoid(torch.randn(x1.shape[0] // 2, device=device))\n        t = torch.cat([t_half, 1.0 - t_half])"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Broadening the logit-normal beyond sigma=1 adds endpoint coverage, the opposite direction of the failed narrowing attempt.</rationale>\n<edit>\n<search>        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))</search>\n<replace>        t = torch.sigmoid(1.5 * torch.randn(x1.shape[0], device=device))</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>A uniform/logit-normal mixture retains mid-timestep focus while guaranteeing regular training at the ODE trajectory endpoints.</rationale>\n<edit>\n<search>        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))</search>\n<replace>        t_ln = torch.sigmoid(torch.randn(x1.shape[0], device=device))\n        t = torch.where(torch.rand_like(t_ln) < 0.5, torch.rand_like(t_ln), t_ln)</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Shifting the logit-normal toward noisy low-t timesteps emphasizes learning the condition-driven global pose structure formed early in integration.</rationale>\n<edit>\n<search>        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))</search>\n<replace>        t = torch.sigmoid(torch.randn(x1.shape[0], device=device) - 0.5)</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>Antithetic mirrored t pairs balance low and high timesteps in every batch, reducing timestep-sampling gradient variance at no extra cost.</rationale>\n<edit>\n<search>        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))</search>\n<replace>        t_half = torch.sigmoid(torch.randn(x1.shape[0] // 2, device=device))\n        t = torch.cat([t_half, 1.0 - t_half])</replace>\n</edit>\n</candidate>"
+  ]
+}

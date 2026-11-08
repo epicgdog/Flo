@@ -1,0 +1,17 @@
+{
+  "iter_id": "0021",
+  "set": "dev",
+  "seed": 0,
+  "status": "train_crash",
+  "score": null,
+  "error": "Traceback (most recent call last):\n  File \"/var/folders/rx/g_bnphms4nndvl_trf0gzq_w0000gn/T/check_train_5zi43py2/train.py\", line 160, in <module>\n    main()\n    ~~~~^^\n  File \"/var/folders/rx/g_bnphms4nndvl_trf0gzq_w0000gn/T/check_train_5zi43py2/train.py\", line 152, in main\n    torch.save(state, os.path.join(args.out, \"model.pt\"))\n    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/epicgdog/Documents/projects/Flo/.venv/lib/python3.14/site-packages/torch/serialization.py\", line 1003, in save\n  File \"/Users/epicgdog/Documents/projects/Flo/.venv/lib/python3.14/site-packages/torch/serialization.py\", line 865, in _open_zipfile_writer\n  File \"/Users/epicgdog/Documents/projects/Flo/.venv/lib/python3.14/site-packages/torch/serialization.py\", line 830, in __init__\n  File \"/Users/epicgdog/Documents/projects/Flo/.venv/lib/python3.14/site-packages/torch/serialization.py\", line 179, in get_crc32_options\n  File \"<frozen importlib._bootstrap>\", line 1371, in _find_and_load\n  File \"<frozen importlib._bootstrap>\", line 1342, in _find_and_load_unlocked\n  File \"<frozen importlib._bootstrap>\", line 938, in _load_unlocked\n  File \"<frozen importlib._bootstrap_external>\", line 755, in exec_module\n  File \"<frozen importlib._bootstrap_external>\", line 892, in get_code\n  File \"<frozen importlib._bootstrap_external>\", line 950, in get_data\nPermissionError: [Errno 1] Operation not permitted: '/Users/epicgdog/Documents/projects/Flo/.venv/lib/python3.14/site-packages/torch/utils/serialization/__init__.py'",
+  "metrics": null,
+  "train": {
+    "steps": 34139,
+    "final_loss": 0.019148636467476516,
+    "elapsed_s": 176.71,
+    "killed_early": false
+  },
+  "params": null,
+  "skeletons_png": null
+}

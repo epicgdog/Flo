@@ -1,0 +1,13 @@
+diff --git a/candidate/train.py b/candidate/train.py
+index 09995ce..31695a9 100644
+--- a/candidate/train.py
++++ b/candidate/train.py
+@@ -88,7 +88,7 @@ def main():
+     model = Net().to(device)
+     n_params = sum(p.numel() for p in model.parameters())
+     print(f"params: {n_params}", flush=True)
+-    opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.0)
++    opt = torch.optim.AdamW(model.parameters(), lr=6e-4, weight_decay=0.0)
+     ema = {k: v.detach().clone() for k, v in model.state_dict().items()}
+ 
+     # Stop a little before the budget so saving fits inside it.

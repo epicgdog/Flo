@@ -1,0 +1,59 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Narrowing the logit-normal concentrates samples on the hardest mid-range timesteps where velocity prediction matters most.",
+      "edits": [
+        [
+          "        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))",
+          "        t = torch.sigmoid(0.5 * torch.randn(x1.shape[0], device=device))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "Widening the logit-normal retains mid-timestep emphasis while giving more coverage of near-endpoint timesteps used during ODE integration.",
+      "edits": [
+        [
+          "        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))",
+          "        t = torch.sigmoid(1.5 * torch.randn(x1.shape[0], device=device))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Mixing uniform and logit-normal sampling preserves endpoint coverage for uniform inference steps while still oversampling intermediate timesteps.",
+      "edits": [
+        [
+          "        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))",
+          "        t = torch.where(torch.rand(x1.shape[0], device=device) < 0.5, torch.rand(x1.shape[0], device=device), torch.sigmoid(torch.randn(x1.shape[0], device=device)))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "Stratified logit-normal sampling reduces per-batch timestep variance so every batch covers the full difficulty range evenly.",
+      "edits": [
+        [
+          "        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))",
+          "        u = (torch.arange(x1.shape[0], device=device, dtype=torch.float32) + torch.rand(x1.shape[0], device=device)) / x1.shape[0]\n        t = torch.sigmoid(1.41421356 * torch.erfinv(2.0 * u[torch.randperm(x1.shape[0], device=device)] - 1.0))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Narrowing the logit-normal concentrates samples on the hardest mid-range timesteps where velocity prediction matters most.</rationale>\n<edit>\n<search>        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))</search>\n<replace>        t = torch.sigmoid(0.5 * torch.randn(x1.shape[0], device=device))</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>Widening the logit-normal retains mid-timestep emphasis while giving more coverage of near-endpoint timesteps used during ODE integration.</rationale>\n<edit>\n<search>        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))</search>\n<replace>        t = torch.sigmoid(1.5 * torch.randn(x1.shape[0], device=device))</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Mixing uniform and logit-normal sampling preserves endpoint coverage for uniform inference steps while still oversampling intermediate timesteps.</rationale>\n<edit>\n<search>        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))</search>\n<replace>        t = torch.where(torch.rand(x1.shape[0], device=device) < 0.5, torch.rand(x1.shape[0], device=device), torch.sigmoid(torch.randn(x1.shape[0], device=device)))</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>Stratified logit-normal sampling reduces per-batch timestep variance so every batch covers the full difficulty range evenly.</rationale>\n<edit>\n<search>        t = torch.sigmoid(torch.randn(x1.shape[0], device=device))</search>\n<replace>        u = (torch.arange(x1.shape[0], device=device, dtype=torch.float32) + torch.rand(x1.shape[0], device=device)) / x1.shape[0]\n        t = torch.sigmoid(1.41421356 * torch.erfinv(2.0 * u[torch.randperm(x1.shape[0], device=device)] - 1.0))</replace>\n</edit>\n</candidate>"
+  ]
+}

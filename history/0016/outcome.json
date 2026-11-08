@@ -1,0 +1,17 @@
+{
+  "iter_id": "0016",
+  "strategy": "timestep_sampling",
+  "rationale": "Broadening the logit-normal beyond sigma=1 adds endpoint coverage, the opposite direction of the failed narrowing attempt.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 70.75866844229452,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 69.06463759145409,
+  "best_heldout_before": 104.32786768072938,
+  "triage": "no_gain",
+  "lesson": "Lesson: Broadening logit-normal timestep sampling beyond sigma=1 (opposite of failed narrowing) gave no gain (+1.7 mm dev, rejected) \u2014 don't widen endpoint coverage.",
+  "duration_s": 195.9,
+  "llm_tokens": 4519
+}

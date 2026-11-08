@@ -1,0 +1,13 @@
+diff --git a/candidate/train.py b/candidate/train.py
+index bf17144..1cb49dd 100644
+--- a/candidate/train.py
++++ b/candidate/train.py
+@@ -117,7 +117,7 @@ def main():
+         xt = (1 - t[:, None]) * x0 + t[:, None] * x1
+         target = x1 - x0
+         v = model(xt, t, c)
+-        loss = ((v - target) ** 2).mean()
++        loss = torch.nn.functional.smooth_l1_loss(v, target, beta=0.5)
+         opt.zero_grad()
+         loss.backward()
+         opt.step()

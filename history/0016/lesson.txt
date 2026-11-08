@@ -1,0 +1,1 @@
+Lesson: Broadening logit-normal timestep sampling beyond sigma=1 (opposite of failed narrowing) gave no gain (+1.7 mm dev, rejected) — don't widen endpoint coverage.

@@ -1,0 +1,67 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Dropout inside each residual block should reduce co-adaptation and overfitting to training poses without changing the model interface or parameter count.",
+      "edits": [
+        [
+          "        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Linear(width, width)\n        )",
+          "        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Dropout(0.1), nn.Linear(width, width)\n        )"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "Small Gaussian noise on only the 2D keypoint coordinates simulates detector jitter and should make the conditioning less brittle on unseen data.",
+      "edits": [
+        [
+          "        x1 = X1[idx]\n        c = C[idx]\n        x0 = torch.randn_like(x1)",
+          "        x1 = X1[idx]\n        c = C[idx].clone()\n        c[:, :34] = c[:, :34] + torch.randn_like(c[:, :34]) * 0.01\n        x0 = torch.randn_like(x1)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Randomly occluding individual joints during training teaches the model to infer missing body parts instead of over-relying on every 2D detection.",
+      "edits": [
+        [
+          "        x1 = X1[idx]\n        c = C[idx]\n        x0 = torch.randn_like(x1)",
+          "        x1 = X1[idx]\n        c = C[idx].clone()\n        drop = torch.rand(x1.shape[0], 17, device=device) < 0.1\n        c[:, :34] = torch.where(drop.repeat_interleave(2, dim=1), torch.zeros_like(c[:, :34]), c[:, :34])\n        c[:, 34:51] = torch.where(drop, torch.zeros_like(c[:, 34:51]), c[:, 34:51])\n        x0 = torch.randn_like(x1)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "An exponential moving average of the weights acts as temporal regularization and usually gives a smoother, better-generalizing flow model at sampling time.",
+      "edits": [
+        [
+          "    model = Net().to(device)\n    n_params = sum(p.numel() for p in model.parameters())",
+          "    model = Net().to(device)\n    ema_params = [p.detach().clone() for p in model.parameters()]\n    n_params = sum(p.numel() for p in model.parameters())"
+        ],
+        [
+          "        opt.step()\n        step += 1",
+          "        opt.step()\n        with torch.no_grad():\n            for p, e in zip(model.parameters(), ema_params):\n                e.mul_(0.999).add_(p.detach(), alpha=0.001)\n        step += 1"
+        ],
+        [
+          "    state = {k: v.detach().cpu() for k, v in model.state_dict().items()}",
+          "    with torch.no_grad():\n        for p, e in zip(model.parameters(), ema_params):\n            p.copy_(e)\n    state = {k: v.detach().cpu() for k, v in model.state_dict().items()}"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Dropout inside each residual block should reduce co-adaptation and overfitting to training poses without changing the model interface or parameter count.</rationale>\n<edit>\n<search>        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Linear(width, width)\n        )</search>\n<replace>        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Dropout(0.1), nn.Linear(width, width)\n        )</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>Small Gaussian noise on only the 2D keypoint coordinates simulates detector jitter and should make the conditioning less brittle on unseen data.</rationale>\n<edit>\n<search>        x1 = X1[idx]\n        c = C[idx]\n        x0 = torch.randn_like(x1)</search>\n<replace>        x1 = X1[idx]\n        c = C[idx].clone()\n        c[:, :34] = c[:, :34] + torch.randn_like(c[:, :34]) * 0.01\n        x0 = torch.randn_like(x1)</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Randomly occluding individual joints during training teaches the model to infer missing body parts instead of over-relying on every 2D detection.</rationale>\n<edit>\n<search>        x1 = X1[idx]\n        c = C[idx]\n        x0 = torch.randn_like(x1)</search>\n<replace>        x1 = X1[idx]\n        c = C[idx].clone()\n        drop = torch.rand(x1.shape[0], 17, device=device) < 0.1\n        c[:, :34] = torch.where(drop.repeat_interleave(2, dim=1), torch.zeros_like(c[:, :34]), c[:, :34])\n        c[:, 34:51] = torch.where(drop, torch.zeros_like(c[:, 34:51]), c[:, 34:51])\n        x0 = torch.randn_like(x1)</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>An exponential moving average of the weights acts as temporal regularization and usually gives a smoother, better-generalizing flow model at sampling time.</rationale>\n<edit>\n<search>    model = Net().to(device)\n    n_params = sum(p.numel() for p in model.parameters())</search>\n<replace>    model = Net().to(device)\n    ema_params = [p.detach().clone() for p in model.parameters()]\n    n_params = sum(p.numel() for p in model.parameters())</replace>\n</edit>\n<edit>\n<search>        opt.step()\n        step += 1</search>\n<replace>        opt.step()\n        with torch.no_grad():\n            for p, e in zip(model.parameters(), ema_params):\n                e.mul_(0.999).add_(p.detach(), alpha=0.001)\n        step += 1</replace>\n</edit>\n<edit>\n<search>    state = {k: v.detach().cpu() for k, v in model.state_dict().items()}</search>\n<replace>    with torch.no_grad():\n        for p, e in zip(model.parameters(), ema_params):\n            p.copy_(e)\n    state = {k: v.detach().cpu() for k, v in model.state_dict().items()}</replace>\n</edit>\n</candidate>"
+  ]
+}

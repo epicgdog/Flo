@@ -1,0 +1,17 @@
+{
+  "iter_id": "0018",
+  "strategy": "conditioning",
+  "rationale": "Adding explicit 2D bone-vector differences gives the conditioner direct limb-direction and length information that raw joint coordinates force the MLP to relearn.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 67.43193019756735,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 67.59418680425208,
+  "best_heldout_before": 99.45541594268263,
+  "triage": "no_gain",
+  "lesson": "Adding explicit 2D bone-vector differences to conditioner gave no gain (-0.2 mm dev): raw joint coordinates already encode limb direction/length for the MLP.",
+  "duration_s": 205.4,
+  "llm_tokens": 6870
+}

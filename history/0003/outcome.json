@@ -1,0 +1,17 @@
+{
+  "iter_id": "0003",
+  "strategy": "architecture",
+  "rationale": "Increase capacity to width 640 with 5 blocks to stay under 5M parameters while adding modeling power.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 74.2496868736248,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 72.46281155375125,
+  "best_heldout_before": 113.31706559114292,
+  "triage": "no_gain",
+  "lesson": "Increasing to width 640 with 5 blocks to stay under 5M params gave +1.8mm dev error with no gain \u2014 rejected; blind capacity adds overfit risk.",
+  "duration_s": 204.0,
+  "llm_tokens": 5738
+}

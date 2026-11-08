@@ -1,0 +1,71 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Centering and scaling 2D keypoints by their mask-weighted centroid and spread inside the model removes image translation and scale variation while retaining position through the frame features.",
+      "edits": [
+        [
+          "    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))",
+          "    def forward(self, x, t, c):\n        kp = c[:, :34].reshape(-1, 17, 2)\n        mk = c[:, 34:51].reshape(-1, 17, 1)\n        w = mk / mk.sum(dim=1, keepdim=True).clamp(min=1.0)\n        cen = (kp * w).sum(dim=1, keepdim=True)\n        kp = kp - cen\n        scale = torch.sqrt(((kp ** 2).sum(dim=2, keepdim=True) * w).sum(dim=1, keepdim=True)).clamp(min=0.05)\n        kp = kp / scale\n        c = torch.cat([kp.reshape(-1, 34), c[:, 34:]], dim=1)\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "FiLM conditioning lets the 2D condition multiplicatively modulate hidden features instead of being diluted as raw inputs concatenated only at the first layer.",
+      "edits": [
+        [
+          "        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)",
+          "        self.inp = nn.Linear(51 + 64, width)\n        self.cond = nn.Sequential(nn.Linear(54, width), nn.GELU(), nn.Linear(width, 2 * width))\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)"
+        ],
+        [
+          "    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))",
+          "    def forward(self, x, t, c):\n        h = self.inp(torch.cat([x, sinusoidal(t)], dim=1))\n        gamma, beta = self.cond(c).chunk(2, dim=1)\n        h = h * (1.0 + torch.tanh(gamma)) + beta\n        return self.out(self.blocks(h))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Appending mask-gated keypoints alongside the raw keypoints gives the model an explicit visibility interaction feature without discarding any occluded-joint information.",
+      "edits": [
+        [
+          "        self.inp = nn.Linear(51 + 54 + 64, width)",
+          "        self.inp = nn.Linear(51 + 54 + 34 + 64, width)"
+        ],
+        [
+          "    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))",
+          "    def forward(self, x, t, c):\n        kp = c[:, :34].reshape(-1, 17, 2)\n        mk = c[:, 34:51].reshape(-1, 17, 1)\n        gated = (kp * mk).reshape(-1, 34)\n        c = torch.cat([c, gated], dim=1)\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "Fourier features of the person's image position and size help the model represent the nonlinear perspective dependence of camera-frame 3D pose on where the person appears.",
+      "edits": [
+        [
+          "        self.inp = nn.Linear(51 + 54 + 64, width)",
+          "        self.inp = nn.Linear(51 + 54 + 24 + 64, width)"
+        ],
+        [
+          "    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))",
+          "    def forward(self, x, t, c):\n        fr = c[:, 51:54]\n        feats = []\n        for f in (1.0, 2.0, 4.0, 8.0):\n            feats.append(torch.sin(fr * f))\n            feats.append(torch.cos(fr * f))\n        c = torch.cat([c] + feats, dim=1)\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Centering and scaling 2D keypoints by their mask-weighted centroid and spread inside the model removes image translation and scale variation while retaining position through the frame features.</rationale>\n<edit>\n<search>    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</search>\n<replace>    def forward(self, x, t, c):\n        kp = c[:, :34].reshape(-1, 17, 2)\n        mk = c[:, 34:51].reshape(-1, 17, 1)\n        w = mk / mk.sum(dim=1, keepdim=True).clamp(min=1.0)\n        cen = (kp * w).sum(dim=1, keepdim=True)\n        kp = kp - cen\n        scale = torch.sqrt(((kp ** 2).sum(dim=2, keepdim=True) * w).sum(dim=1, keepdim=True)).clamp(min=0.05)\n        kp = kp / scale\n        c = torch.cat([kp.reshape(-1, 34), c[:, 34:]], dim=1)\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>FiLM conditioning lets the 2D condition multiplicatively modulate hidden features instead of being diluted as raw inputs concatenated only at the first layer.</rationale>\n<edit>\n<search>        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)</search>\n<replace>        self.inp = nn.Linear(51 + 64, width)\n        self.cond = nn.Sequential(nn.Linear(54, width), nn.GELU(), nn.Linear(width, 2 * width))\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)</replace>\n</edit>\n<edit>\n<search>    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</search>\n<replace>    def forward(self, x, t, c):\n        h = self.inp(torch.cat([x, sinusoidal(t)], dim=1))\n        gamma, beta = self.cond(c).chunk(2, dim=1)\n        h = h * (1.0 + torch.tanh(gamma)) + beta\n        return self.out(self.blocks(h))</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Appending mask-gated keypoints alongside the raw keypoints gives the model an explicit visibility interaction feature without discarding any occluded-joint information.</rationale>\n<edit>\n<search>        self.inp = nn.Linear(51 + 54 + 64, width)</search>\n<replace>        self.inp = nn.Linear(51 + 54 + 34 + 64, width)</replace>\n</edit>\n<edit>\n<search>    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</search>\n<replace>    def forward(self, x, t, c):\n        kp = c[:, :34].reshape(-1, 17, 2)\n        mk = c[:, 34:51].reshape(-1, 17, 1)\n        gated = (kp * mk).reshape(-1, 34)\n        c = torch.cat([c, gated], dim=1)\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>Fourier features of the person's image position and size help the model represent the nonlinear perspective dependence of camera-frame 3D pose on where the person appears.</rationale>\n<edit>\n<search>        self.inp = nn.Linear(51 + 54 + 64, width)</search>\n<replace>        self.inp = nn.Linear(51 + 54 + 24 + 64, width)</replace>\n</edit>\n<edit>\n<search>    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</search>\n<replace>    def forward(self, x, t, c):\n        fr = c[:, 51:54]\n        feats = []\n        for f in (1.0, 2.0, 4.0, 8.0):\n            feats.append(torch.sin(fr * f))\n            feats.append(torch.cos(fr * f))\n        c = torch.cat([c] + feats, dim=1)\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</replace>\n</edit>\n</candidate>"
+  ]
+}

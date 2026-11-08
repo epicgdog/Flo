@@ -1,0 +1,59 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Adding small Gaussian noise only to visible 2D keypoints regularizes against detector localization error on unseen data.",
+      "edits": [
+        [
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]",
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx].clone()\n        c[:, :34] = c[:, :34] + torch.randn_like(c[:, :34]) * 0.015 * c[:, 34:51].repeat_interleave(2, dim=1)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "Randomly occluding conditioning joints during training simulates unseen occlusions and prevents reliance on any single 2D joint.",
+      "edits": [
+        [
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]",
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx].clone()\n        drop = torch.rand(c.shape[0], 17, device=device) < 0.10\n        c[:, :34] = c[:, :34].masked_fill(drop.repeat_interleave(2, dim=1), 0.0)\n        c[:, 34:51] = c[:, 34:51].masked_fill(drop, 0.0)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Per-sample stochastic depth regularizes the residual blocks by randomly skipping whole updates, unlike the previously failed elementwise dropout.",
+      "edits": [
+        [
+          "    def forward(self, h, e):\n        scale, shift = self.film(e).chunk(2, dim=1)\n        return h + self.net(h) * (1.0 + scale) + shift",
+          "    def forward(self, h, e):\n        scale, shift = self.film(e).chunk(2, dim=1)\n        update = self.net(h) * (1.0 + scale) + shift\n        if self.training:\n            keep = (torch.rand(h.shape[0], 1, device=h.device) > 0.1).to(h.dtype)\n            return h + update * keep / 0.9\n        return h + update"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "Horizontal-flip augmentation with left/right joint swaps exploits body symmetry in both the 2D condition and the camera-frame 3D target.",
+      "edits": [
+        [
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]",
+          "        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx].clone()\n        c = C[idx].clone()\n        flip = torch.rand(x1.shape[0], device=device) < 0.5\n        if flip.any():\n            pairs = [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]\n            kp = c[:, :34].reshape(-1, 17, 2)\n            kp[flip, :, 0] = 1.0 - kp[flip, :, 0]\n            c[:, :34] = kp[:, pairs, :].reshape(-1, 34)\n            c[flip, 51] = 1.0 - c[flip, 51]\n            pose = x1.reshape(-1, 17, 3)\n            pose[flip, :, 0] = -pose[flip, :, 0]\n            x1 = pose[:, pairs, :].reshape(-1, 51)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Adding small Gaussian noise only to visible 2D keypoints regularizes against detector localization error on unseen data.</rationale>\n<edit>\n<search>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]</search>\n<replace>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx].clone()\n        c[:, :34] = c[:, :34] + torch.randn_like(c[:, :34]) * 0.015 * c[:, 34:51].repeat_interleave(2, dim=1)</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>Randomly occluding conditioning joints during training simulates unseen occlusions and prevents reliance on any single 2D joint.</rationale>\n<edit>\n<search>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]</search>\n<replace>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx].clone()\n        drop = torch.rand(c.shape[0], 17, device=device) < 0.10\n        c[:, :34] = c[:, :34].masked_fill(drop.repeat_interleave(2, dim=1), 0.0)\n        c[:, 34:51] = c[:, 34:51].masked_fill(drop, 0.0)</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Per-sample stochastic depth regularizes the residual blocks by randomly skipping whole updates, unlike the previously failed elementwise dropout.</rationale>\n<edit>\n<search>    def forward(self, h, e):\n        scale, shift = self.film(e).chunk(2, dim=1)\n        return h + self.net(h) * (1.0 + scale) + shift</search>\n<replace>    def forward(self, h, e):\n        scale, shift = self.film(e).chunk(2, dim=1)\n        update = self.net(h) * (1.0 + scale) + shift\n        if self.training:\n            keep = (torch.rand(h.shape[0], 1, device=h.device) > 0.1).to(h.dtype)\n            return h + update * keep / 0.9\n        return h + update</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>Horizontal-flip augmentation with left/right joint swaps exploits body symmetry in both the 2D condition and the camera-frame 3D target.</rationale>\n<edit>\n<search>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx]\n        c = C[idx]</search>\n<replace>        idx = torch.from_numpy(rng.integers(0, N, 256)).to(device)\n        x1 = X1[idx].clone()\n        c = C[idx].clone()\n        flip = torch.rand(x1.shape[0], device=device) < 0.5\n        if flip.any():\n            pairs = [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]\n            kp = c[:, :34].reshape(-1, 17, 2)\n            kp[flip, :, 0] = 1.0 - kp[flip, :, 0]\n            c[:, :34] = kp[:, pairs, :].reshape(-1, 34)\n            c[flip, 51] = 1.0 - c[flip, 51]\n            pose = x1.reshape(-1, 17, 3)\n            pose[flip, :, 0] = -pose[flip, :, 0]\n            x1 = pose[:, pairs, :].reshape(-1, 51)</replace>\n</edit>\n</candidate>"
+  ]
+}

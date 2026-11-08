@@ -1,0 +1,17 @@
+{
+  "iter_id": "0017",
+  "strategy": "architecture",
+  "rationale": "FiLM modulation lets the timestep and 2D condition rescale each residual block instead of influencing the network only at the input.",
+  "accepted": true,
+  "reason": null,
+  "tag": "v4",
+  "dev": 67.59418680425208,
+  "dev2": 67.51026122955959,
+  "heldout": 99.45541594268263,
+  "best_dev_before": 69.06463759145409,
+  "best_heldout_before": 104.32786768072938,
+  "triage": null,
+  "lesson": "Lesson: FiLM modulation of each residual block by the timestep and 2D condition beat input-only conditioning, cutting dev error by 1.5 mm\u2014adopt per-block modulation.",
+  "duration_s": 558.6,
+  "llm_tokens": 5916
+}

@@ -1,0 +1,1 @@
+Lesson: FiLM modulation of each residual block by the timestep and 2D condition beat input-only conditioning, cutting dev error by 1.5 mm—adopt per-block modulation.

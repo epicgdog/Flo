@@ -1,0 +1,17 @@
+{
+  "iter_id": "0021",
+  "strategy": "fix_last_failure",
+  "rationale": "Cosine-decaying the learning rate to zero over the known time budget should settle the EMA weights into a better final minimum without changing the model.",
+  "accepted": false,
+  "reason": "error: RuntimeError('git checkout main failed: fatal: Unable to read current working directory: Operation not permitted')",
+  "tag": null,
+  "dev": null,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 67.59418680425208,
+  "best_heldout_before": 99.45541594268263,
+  "triage": null,
+  "lesson": null,
+  "duration_s": 222.0,
+  "llm_tokens": 8728
+}

@@ -1,0 +1,17 @@
+{
+  "iter_id": "0004",
+  "strategy": "conditioning",
+  "rationale": "Zero out invisible 2D joints so occluded detections do not leak noise while keeping the mask as signal.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 73.29222350134462,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 72.46281155375125,
+  "best_heldout_before": 113.31706559114292,
+  "triage": "no_gain",
+  "lesson": "Lesson: Zeroing invisible 2D joints to block occluded noise while keeping mask signal gave no gain (+0.8mm dev) \u2014 rejected.",
+  "duration_s": 206.7,
+  "llm_tokens": 6381
+}

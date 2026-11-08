@@ -1,0 +1,17 @@
+{
+  "iter_id": "0002",
+  "strategy": "timestep_sampling",
+  "rationale": "Sample t from logit-normal to focus training on intermediate timesteps where the velocity is hardest to learn.",
+  "accepted": true,
+  "reason": null,
+  "tag": "v2",
+  "dev": 72.46281155375125,
+  "dev2": 73.06374706110732,
+  "heldout": 113.31706559114292,
+  "best_dev_before": 75.11961338687618,
+  "best_heldout_before": 115.05005709533026,
+  "triage": null,
+  "lesson": "Sample t from logit-normal to focus on hard intermediate timesteps; dev error -2.7 mm \u2014 use for velocity training.",
+  "duration_s": 547.4,
+  "llm_tokens": 3894
+}

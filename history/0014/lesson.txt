@@ -1,0 +1,1 @@
+Lesson: Use an EMA of weights at sampling time for the flow model—smoother, better-generalizing output at no extra parameter cost; accepted, dev improved by -3.4 mm.

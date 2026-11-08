@@ -1,0 +1,17 @@
+{
+  "iter_id": "0006",
+  "strategy": "regularization",
+  "rationale": "Add AdamW weight decay to penalize large weights and reduce overfitting to training poses.",
+  "accepted": false,
+  "reason": "no_gain",
+  "tag": null,
+  "dev": 75.09936878971448,
+  "dev2": null,
+  "heldout": null,
+  "best_dev_before": 72.46281155375125,
+  "best_heldout_before": 113.31706559114292,
+  "triage": "no_gain",
+  "lesson": "Lesson: AdamW weight decay to curb pose overfitting gave no gain, dev +2.6 mm \u2014 rejected; avoid weight decay for this.",
+  "duration_s": 196.4,
+  "llm_tokens": 4621
+}

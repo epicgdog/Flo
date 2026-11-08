@@ -1,0 +1,59 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "Increase capacity to width 640 with 5 blocks to stay under 5M parameters while adding modeling power.",
+      "edits": [
+        [
+          "    def __init__(self, width=512, blocks=3):",
+          "    def __init__(self, width=640, blocks=5):"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "Replace flat concatenation with separate encoders for pose, condition and time fused additively for better conditioning.",
+      "edits": [
+        [
+          "class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))",
+          "class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.x_emb = nn.Linear(51, width)\n        self.c_emb = nn.Sequential(nn.Linear(54, width), nn.GELU(), nn.Linear(width, width))\n        self.t_emb = nn.Sequential(nn.Linear(64, width), nn.GELU(), nn.Linear(width, width))\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = self.x_emb(x) + self.c_emb(c) + self.t_emb(sinusoidal(t))\n        return self.out(self.blocks(h))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "Add per-block FiLM time modulation so intermediate layers adapt to the flow timestep.",
+      "edits": [
+        [
+          "class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))",
+          "class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.ModuleList([Block(width) for _ in range(blocks)])\n        self.t_mlp = nn.Sequential(nn.Linear(64, width), nn.SiLU(), nn.Linear(width, width * blocks * 2))\n        self.out = nn.Linear(width, 51)\n        self.blocks_n = blocks\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        h = self.inp(h)\n        tb = self.t_mlp(sinusoidal(t)).chunk(self.blocks_n * 2, dim=1)\n        for i, blk in enumerate(self.blocks):\n            s = tb[2 * i]\n            b = tb[2 * i + 1]\n            h = blk(h * (1 + s) + b)\n        return self.out(h)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "Add a direct linear skip from input pose to velocity output with zero-initialized head for stable residual learning.",
+      "edits": [
+        [
+          "class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))",
+          "class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n        self.skip = nn.Linear(51, 51)\n        with torch.no_grad():\n            self.out.weight.zero_()\n            self.out.bias.zero_()\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h))) + self.skip(x)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>Increase capacity to width 640 with 5 blocks to stay under 5M parameters while adding modeling power.</rationale>\n<edit>\n<search>    def __init__(self, width=512, blocks=3):</search>\n<replace>    def __init__(self, width=640, blocks=5):</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>Replace flat concatenation with separate encoders for pose, condition and time fused additively for better conditioning.</rationale>\n<edit>\n<search>class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</search>\n<replace>class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.x_emb = nn.Linear(51, width)\n        self.c_emb = nn.Sequential(nn.Linear(54, width), nn.GELU(), nn.Linear(width, width))\n        self.t_emb = nn.Sequential(nn.Linear(64, width), nn.GELU(), nn.Linear(width, width))\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = self.x_emb(x) + self.c_emb(c) + self.t_emb(sinusoidal(t))\n        return self.out(self.blocks(h))</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>Add per-block FiLM time modulation so intermediate layers adapt to the flow timestep.</rationale>\n<edit>\n<search>class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</search>\n<replace>class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.ModuleList([Block(width) for _ in range(blocks)])\n        self.t_mlp = nn.Sequential(nn.Linear(64, width), nn.SiLU(), nn.Linear(width, width * blocks * 2))\n        self.out = nn.Linear(width, 51)\n        self.blocks_n = blocks\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        h = self.inp(h)\n        tb = self.t_mlp(sinusoidal(t)).chunk(self.blocks_n * 2, dim=1)\n        for i, blk in enumerate(self.blocks):\n            s = tb[2 * i]\n            b = tb[2 * i + 1]\n            h = blk(h * (1 + s) + b)\n        return self.out(h)</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>Add a direct linear skip from input pose to velocity output with zero-initialized head for stable residual learning.</rationale>\n<edit>\n<search>class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</search>\n<replace>class Net(nn.Module):\n    def __init__(self, width=512, blocks=3):\n        super().__init__()\n        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n        self.skip = nn.Linear(51, 51)\n        with torch.no_grad():\n            self.out.weight.zero_()\n            self.out.bias.zero_()\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h))) + self.skip(x)</replace>\n</edit>\n</candidate>"
+  ]
+}

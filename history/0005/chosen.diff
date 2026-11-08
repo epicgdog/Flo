@@ -1,0 +1,16 @@
+diff --git a/candidate/train.py b/candidate/train.py
+index d4a9bed..4bbdedc 100644
+--- a/candidate/train.py
++++ b/candidate/train.py
+@@ -110,7 +110,10 @@ def main():
+         xt = (1 - t[:, None]) * x0 + t[:, None] * x1
+         target = x1 - x0
+         v = model(xt, t, c)
+-        loss = ((v - target) ** 2).mean()
++        se = ((v - target) ** 2).view(-1, 17, 3).mean(dim=2)
++        m = c[:, 34:51]
++        w = 0.5 + 0.5 * m
++        loss = (se * w).mean()
+         opt.zero_grad()
+         loss.backward()
+         opt.step()

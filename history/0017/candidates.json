@@ -1,0 +1,63 @@
+{
+  "candidates": [
+    {
+      "attempt": 1,
+      "id": "A",
+      "rationale": "FiLM modulation lets the timestep and 2D condition rescale each residual block instead of influencing the network only at the input.",
+      "edits": [
+        [
+          "class Block(nn.Module):\n    def __init__(self, width):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Linear(width, width)\n        )\n\n    def forward(self, h):\n        return h + self.net(h)",
+          "class Block(nn.Module):\n    def __init__(self, width):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Linear(width, width)\n        )\n        self.film = nn.Linear(width, 2 * width)\n\n    def forward(self, h, e):\n        scale, shift = self.film(e).chunk(2, dim=1)\n        return h + self.net(h) * (1.0 + scale) + shift"
+        ],
+        [
+          "        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))",
+          "        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)\n        self.blocks = nn.ModuleList([Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))\n        for block in self.blocks:\n            h = block(h, e)\n        return self.out(h)"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "B",
+      "rationale": "Separate learned embeddings for the noisy pose, condition, and timestep prevent any one input group from dominating the shared input projection.",
+      "edits": [
+        [
+          "        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))",
+          "        self.inp_x = nn.Linear(51, width)\n        self.inp_c = nn.Linear(54, width)\n        self.inp_t = nn.Sequential(nn.Linear(64, width), nn.GELU(), nn.Linear(width, width))\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = self.inp_x(x) + self.inp_c(c) + self.inp_t(sinusoidal(t))\n        return self.out(self.blocks(h))"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "C",
+      "rationale": "A two-times hidden expansion inside each residual block adds nonlinear capacity per layer while keeping the residual-stream width and depth unchanged.",
+      "edits": [
+        [
+          "        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Linear(width, width)\n        )",
+          "        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, 2 * width), nn.GELU(), nn.Linear(2 * width, width)\n        )"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    },
+    {
+      "attempt": 1,
+      "id": "D",
+      "rationale": "A deeper but narrower residual stack provides more sequential refinement steps for velocity prediction while staying well under the parameter limit.",
+      "edits": [
+        [
+          "    def __init__(self, width=512, blocks=3):",
+          "    def __init__(self, width=384, blocks=8):"
+        ]
+      ],
+      "valid": true,
+      "error": null
+    }
+  ],
+  "raw_responses": [
+    "<candidate id=\"A\">\n<rationale>FiLM modulation lets the timestep and 2D condition rescale each residual block instead of influencing the network only at the input.</rationale>\n<edit>\n<search>class Block(nn.Module):\n    def __init__(self, width):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Linear(width, width)\n        )\n\n    def forward(self, h):\n        return h + self.net(h)</search>\n<replace>class Block(nn.Module):\n    def __init__(self, width):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Linear(width, width)\n        )\n        self.film = nn.Linear(width, 2 * width)\n\n    def forward(self, h, e):\n        scale, shift = self.film(e).chunk(2, dim=1)\n        return h + self.net(h) * (1.0 + scale) + shift</replace>\n</edit>\n<edit>\n<search>        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</search>\n<replace>        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.cond = nn.Linear(54 + 64, width)\n        self.blocks = nn.ModuleList([Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        e = self.cond(torch.cat([c, sinusoidal(t)], dim=1))\n        h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))\n        for block in self.blocks:\n            h = block(h, e)\n        return self.out(h)</replace>\n</edit>\n</candidate>\n<candidate id=\"B\">\n<rationale>Separate learned embeddings for the noisy pose, condition, and timestep prevent any one input group from dominating the shared input projection.</rationale>\n<edit>\n<search>        self.inp = nn.Linear(51 + 54 + 64, width)\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = torch.cat([x, c, sinusoidal(t)], dim=1)\n        return self.out(self.blocks(self.inp(h)))</search>\n<replace>        self.inp_x = nn.Linear(51, width)\n        self.inp_c = nn.Linear(54, width)\n        self.inp_t = nn.Sequential(nn.Linear(64, width), nn.GELU(), nn.Linear(width, width))\n        self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])\n        self.out = nn.Linear(width, 51)\n\n    def forward(self, x, t, c):\n        h = self.inp_x(x) + self.inp_c(c) + self.inp_t(sinusoidal(t))\n        return self.out(self.blocks(h))</replace>\n</edit>\n</candidate>\n<candidate id=\"C\">\n<rationale>A two-times hidden expansion inside each residual block adds nonlinear capacity per layer while keeping the residual-stream width and depth unchanged.</rationale>\n<edit>\n<search>        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, width), nn.GELU(), nn.Linear(width, width)\n        )</search>\n<replace>        self.net = nn.Sequential(\n            nn.LayerNorm(width), nn.Linear(width, 2 * width), nn.GELU(), nn.Linear(2 * width, width)\n        )</replace>\n</edit>\n</candidate>\n<candidate id=\"D\">\n<rationale>A deeper but narrower residual stack provides more sequential refinement steps for velocity prediction while staying well under the parameter limit.</rationale>\n<edit>\n<search>    def __init__(self, width=512, blocks=3):</search>\n<replace>    def __init__(self, width=384, blocks=8):</replace>\n</edit>\n</candidate>"
+  ]
+}

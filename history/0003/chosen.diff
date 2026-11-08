@@ -1,0 +1,13 @@
+diff --git a/candidate/train.py b/candidate/train.py
+index d4a9bed..8b90072 100644
+--- a/candidate/train.py
++++ b/candidate/train.py
+@@ -38,7 +38,7 @@ class Block(nn.Module):
+ 
+ 
+ class Net(nn.Module):
+-    def __init__(self, width=512, blocks=3):
++    def __init__(self, width=640, blocks=5):
+         super().__init__()
+         self.inp = nn.Linear(51 + 54 + 64, width)
+         self.blocks = nn.Sequential(*[Block(width) for _ in range(blocks)])
