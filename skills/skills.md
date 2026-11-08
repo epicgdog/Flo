@@ -18,4 +18,5 @@
 - [0016] Lesson: Broadening logit-normal timestep sampling beyond sigma=1 (opposite of failed narrowing) gave no gain (+1.7 mm dev, rejected) — don't widen endpoint coverage.
 - [0018] Adding explicit 2D bone-vector differences to conditioner gave no gain (-0.2 mm dev): raw joint coordinates already encode limb direction/length for the MLP.
 - [0019] Huber velocity loss gave no gain (-0.9 mm, rejected): down-weighting rare extreme pose/occlusion outliers doesn't help; MSE's smooth gradients for typical errors suffice.
+- [0020] Lesson: Adding small Gaussian noise only to visible 2D keypoints gave no gain (+3.2 mm dev worsening), so it doesn't regularize against detector localization error on unseen data.
 ## Open hypotheses
