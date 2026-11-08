@@ -26,6 +26,7 @@
 - [0025] Lesson: Appending frame-normalized keypoints for translation- and scale-invariant pose conditioning (alongside absolute coordinates) crashed training—avoid this conditioning change.
 - [0027] Random occlusion augmentation as regularization gave no robustness gain (+0.8 mm dev error), so simulating missing joints doesn't prevent over-reliance on visible keypoints.
 - [0028] Sampling batch indices on-GPU to eliminate per-step NumPy-to-device transfer gave only +0.3 mm (no gain): that transfer isn't the bottleneck for adding steps within budget.
+- [0029] Lesson: Longer EMA horizon (tune_optimizer) smoothed saved weights but yielded only +0.1 mm dev gain—rejected as no_gain; heavier EMA alone won't improve generalization.
 ## Open hypotheses
 - [hint] The time budget is fixed, so more training steps per second lowers error: try bf16 autocast, a larger batch with a matching learning rate, or sampling batch indices on the GPU instead of with numpy.
 - [hint] 0005 (weight the velocity loss by 2D visibility) scored 72.29, just short of the bar; try combining it with another change.
