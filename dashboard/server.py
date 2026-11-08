@@ -163,6 +163,41 @@ def summary():
     }
 
 
+def dataset(set_name: str, n: int) -> dict:
+    """First n samples of a dataset as the camera saw them: the 2D pose in pixels, the drone pose relative to the
+    person, and the 3D pose in camera coordinates. Pixel coords are rebuilt from the stored normalized keypoints
+    and the frame (root position and bbox size, in focal units)."""
+    import numpy as np
+    from checker.datagen import BONES
+    if set_name not in _data_cache:
+        d = np.load(C.abspath(P[set_name]))
+        _data_cache[set_name] = {k: d[k] for k in ("kp2d", "mask", "frame", "pose3d", "cam")}
+    d = _data_cache[set_name]
+    W, H = CFG["data"]["sensor_px"]
+    out = []
+    for i in range(min(n, len(d["cam"]))):
+        cam = d["cam"][i].astype(np.float64)
+        az, el, dist, focal, yaw_off, pitch, roll = cam
+        frame = d["frame"][i].astype(np.float64)
+        mask = d["mask"][i]
+        root2d = frame[:2] * focal + np.array([W / 2, H / 2])
+        diag = frame[2] * focal
+        uv = d["kp2d"][i].astype(np.float64) * diag + root2d
+        pos = dist * np.array([np.cos(np.deg2rad(el)) * np.cos(np.deg2rad(az)),
+                               np.cos(np.deg2rad(el)) * np.sin(np.deg2rad(az)), np.sin(np.deg2rad(el))])
+        out.append({
+            "idx": i,
+            "uv": [[float(x), float(y)] if m > 0 else None for (x, y), m in zip(uv, mask)],
+            "mask": [int(m > 0) for m in mask],
+            "visible": int((mask > 0).sum()),
+            "pose3d": d["pose3d"][i].astype(float).tolist(),
+            "cam": {"azimuth_deg": az, "elevation_deg": el, "distance_m": dist, "focal_px": focal,
+                    "yaw_offset_deg": yaw_off, "pitch_down_deg": pitch, "roll_deg": roll,
+                    "heading_deg": az + 180 + yaw_off, "pos": pos.tolist()},
+        })
+    return {"set": set_name, "W": W, "H": H, "bones": [list(map(int, b)) for b in BONES], "samples": out}
+
+
 def bones():
     from checker.datagen import BONES
     return [list(map(int, b)) for b in BONES]
@@ -279,6 +314,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_file(hfile(parts[2], parts[3]))
             if u.path == "/api/sim_frame":
                 return self.send_file(C.abspath(P["sim_frame"]))
+            if u.path == "/api/dataset":
+                which = q.get("set", "train")
+                if which not in ("train", "dev", "heldout"):
+                    return self.send_json({"error": "bad set"}, 400)
+                return self.send_json(dataset(which, max(1, min(int(q.get("n", 2)), 20))))
             if u.path == "/api/viewer":
                 which = q.get("set", "dev")
                 if which not in ("dev", "heldout"):

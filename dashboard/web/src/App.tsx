@@ -5,7 +5,7 @@ import {
   type Outcome, type Status, type Summary,
 } from './lib'
 
-const TABS = ['Progress', 'Live run', 'Attempts', 'Skills', '3D viewer', 'Snap and cost', 'Drone sim'] as const
+const TABS = ['Progress', 'Live run', 'Attempts', 'Skills', '3D viewer', 'Snap and cost', 'Dataset'] as const
 type Tab = (typeof TABS)[number]
 const KINDS: Status[] = ['accepted', 'rejected', 'killed_early', 'failed']
 
@@ -28,7 +28,7 @@ export default function App() {
             {tab === 'Skills' && <SkillsTab s={data} />}
             {tab === '3D viewer' && <ViewerTab s={data} />}
             {tab === 'Snap and cost' && <SnapCostTab s={data} />}
-            {tab === 'Drone sim' && <SimTab s={data} />}
+            {tab === 'Dataset' && <DatasetTab />}
           </>
         )}
       </div>
@@ -386,45 +386,63 @@ function SnapCostTab({ s }: { s: Summary }) {
   )
 }
 
-// ---------- drone sim ----------
-function SimTab({ s }: { s: Summary }) {
-  const rows = s.sim.rows
-  const [bust] = useState(() => Date.now())
-  if (!rows.length) return <div className="info">No sim run yet: <code>uv run python3 sim/run_sim.py</code></div>
-  const last = rows[rows.length - 1]
-  const bones = s.bones ?? []
-  const skel: object[] = []
-  if (last.gt) {
-    skel.push(skelTrace(last.gt, bones, 'ground truth', C.grey, 8))
-    if (last.pred_v0) skel.push(skelTrace(last.pred_v0, bones, 'v0', C.red, 5))
-    skel.push(skelTrace(last.pred_best, bones, 'best', C.green, 5))
-  }
+// ---------- dataset ----------
+type DSample = {
+  idx: number; uv: (number[] | null)[]; mask: number[]; visible: number; pose3d: number[][]
+  cam: { azimuth_deg: number; elevation_deg: number; distance_m: number; focal_px: number; yaw_offset_deg: number
+         pitch_down_deg: number; roll_deg: number; heading_deg: number; pos: number[] }
+}
+type DResp = { set: string; W: number; H: number; bones: number[][]; samples: DSample[]; error?: string }
+
+function DatasetTab() {
+  const { data, error } = usePoll<DResp>('/api/dataset?set=train&n=2', 600000)
+  if (error) return <div className="info">Cannot load dataset: {error}</div>
+  if (!data) return <div className="info">Loading dataset…</div>
+  if (data.error) return <div className="info">{data.error}</div>
   return (
     <>
-      <div className="grid2">
-        {s.sim.has_frame && (
-          <figure style={{ margin: 0 }}>
-            <img className="figure" src={`/api/sim_frame?t=${bust}-${rows.length}`} alt="live camera frame" />
-            <figcaption className="small muted">live camera frame (mock Tello)</figcaption>
-          </figure>
-        )}
-        {skel.length > 0 && <div className="card"><Plot height={380} rev="simskel" data={skel} layout={{ scene: { aspectmode: 'data' }, margin: { t: 10, r: 10, b: 10, l: 10 } }} /></div>}
-      </div>
-      <div className="grid2">
-        <div className="card">
-          <Plot height={360} rev="simpath" data={[
-            { type: 'scatter', mode: 'lines+markers', x: rows.map(r => r.drone.x), y: rows.map(r => r.drone.y), name: 'drone', line: { color: C.blue } },
-            { type: 'scatter', mode: 'markers', x: [0], y: [0], name: 'person', marker: { size: 14, symbol: 'star', color: C.orange } },
-          ]} layout={{ title: { text: 'top-down path', font: { size: 13 } }, xaxis: { title: { text: 'x (m)' } }, yaxis: { title: { text: 'y (m)' }, scaleanchor: 'x' }, margin: { t: 40, r: 20, b: 85, l: 55 } }} />
-        </div>
-        <div className="card">
-          <Plot height={360} rev="simerr" data={[
-            { type: 'scatter', mode: 'lines', x: rows.map(r => r.t), y: rows.map(r => r.mpjpe_v0_mm), name: 'v0', line: { color: C.red } },
-            { type: 'scatter', mode: 'lines', x: rows.map(r => r.t), y: rows.map(r => r.mpjpe_best_mm), name: 'best', line: { color: C.green } },
-            { type: 'scatter', mode: 'lines', x: rows.map(r => r.t), y: rows.map(r => r.elevation_deg), name: 'elevation', yaxis: 'y2', line: { dash: 'dot', color: C.grey } },
-          ]} layout={{ title: { text: 'MPJPE over time', font: { size: 13 } }, xaxis: { title: { text: 't (s)' } }, yaxis: { title: { text: 'MPJPE (mm)' } }, yaxis2: { title: { text: 'elevation (deg)' }, overlaying: 'y', side: 'right' }, margin: { t: 40, r: 60, b: 85, l: 55 } }} />
-        </div>
-      </div>
+      <p className="small muted">First {data.samples.length} samples of the {data.set} set. The 2D pose is rebuilt in pixels from the stored keypoints and frame; the drone is the camera pose relative to the person.</p>
+      {data.samples.map(s => <DatasetSample key={s.idx} s={s} W={data.W} H={data.H} bones={data.bones} />)}
     </>
+  )
+}
+
+function DatasetSample({ s, W, H, bones }: { s: DSample; W: number; H: number; bones: number[][] }) {
+  const c = s.cam
+  // camera-frame pose: x right, y down, z forward. Plot as x right, y forward, z up.
+  const p3 = s.pose3d.map(([x, y, z]) => [x, z, -y])
+  const plotData: object[] = [skelTrace(p3, bones, 'pose (camera frame)', C.blue, 6)]
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 style={{ marginTop: 0 }}>Sample {s.idx}</h3>
+      <div className="grid2">
+        <figure style={{ margin: 0 }}>
+          <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', background: '#1b1f24', borderRadius: 6 }} role="img" aria-label={`2D pose sample ${s.idx}`}>
+            <rect x={0} y={0} width={W} height={H} fill="none" stroke={C.grey} strokeWidth={3} />
+            <line x1={W / 2} y1={0} x2={W / 2} y2={H} stroke="#333" strokeDasharray="8 8" />
+            <line x1={0} y1={H / 2} x2={W} y2={H / 2} stroke="#333" strokeDasharray="8 8" />
+            {bones.map(([a, b], i) => s.uv[a] && s.uv[b]
+              ? <line key={i} x1={s.uv[a]![0]} y1={s.uv[a]![1]} x2={s.uv[b]![0]} y2={s.uv[b]![1]} stroke={C.green} strokeWidth={6} />
+              : null)}
+            {s.uv.map((p, j) => p && <circle key={j} cx={p[0]} cy={p[1]} r={9} fill={C.orange} />)}
+          </svg>
+          <figcaption className="small muted">2D pose in the drone image (960×720 px), {s.visible} of 17 joints visible. Hidden joints are not drawn.</figcaption>
+        </figure>
+        <div>
+          <table className="small" style={{ marginTop: 6 }}>
+            <tbody>
+              <tr><td>distance</td><td>{c.distance_m.toFixed(2)} m</td></tr>
+              <tr><td>elevation</td><td>{c.elevation_deg.toFixed(1)}°</td></tr>
+              <tr><td>heading (drone)</td><td>{(c.heading_deg % 360).toFixed(0)}°</td></tr>
+              <tr><td>yaw offset</td><td>{c.yaw_offset_deg.toFixed(1)}°</td></tr>
+              <tr><td>camera pitch down</td><td>{c.pitch_down_deg.toFixed(1)}°</td></tr>
+              <tr><td>roll</td><td>{c.roll_deg.toFixed(1)}°</td></tr>
+              <tr><td>focal length</td><td>{c.focal_px.toFixed(0)} px</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <Plot height={340} rev={`ds${s.idx}`} data={plotData} layout={{ scene: { aspectmode: 'data' }, margin: { t: 10, r: 10, b: 10, l: 10 } }} />
+    </div>
   )
 }
