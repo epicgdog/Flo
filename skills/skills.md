@@ -4,6 +4,7 @@
 - [0014] Lesson: Use an EMA of weights at sampling time for the flow model—smoother, better-generalizing output at no extra parameter cost; accepted, dev improved by -3.4 mm.
 - [0017] Lesson: FiLM modulation of each residual block by the timestep and 2D condition beat input-only conditioning, cutting dev error by 1.5 mm—adopt per-block modulation.
 - [0026] Lesson: Switch target to clean-pose prediction (converted internally to velocity) to weight final-pose accuracy over uniform velocity error; accepted, dev improved 4.3 mm.
+- [0040] Cap the clean-pose loss weight near t=1: accepted (-2.7 mm dev); limiting high-t weight stops exploding gradients from dominating training.
 ## Failed ideas (do not retry without a new reason)
 - [0003] Increasing to width 640 with 5 blocks to stay under 5M params gave +1.8mm dev error with no gain — rejected; blind capacity adds overfit risk.
 - [0004] Lesson: Zeroing invisible 2D joints to block occluded noise while keeping mask signal gave no gain (+0.8mm dev) — rejected.
