@@ -28,6 +28,7 @@
 - [0028] Sampling batch indices on-GPU to eliminate per-step NumPy-to-device transfer gave only +0.3 mm (no gain): that transfer isn't the bottleneck for adding steps within budget.
 - [0029] Lesson: Longer EMA horizon (tune_optimizer) smoothed saved weights but yielded only +0.1 mm dev gain—rejected as no_gain; heavier EMA alone won't improve generalization.
 - [0030] Shifting logit-normal mean down to rebalance clean-pose velocity loss (1/(1-t)^2) toward low-mid t gave +1.6 mm dev error—no gain; keep original timestep sampling.
+- [0033] Lesson: Adding a bone-vector loss on the implied clean pose to enforce limb lengths/skeleton geometry gave no gain (+0.2 mm dev), so per-coordinate MSE alone is sufficient.
 ## Open hypotheses
 - [hint] The time budget is fixed, so more training steps per second lowers error: try bf16 autocast, a larger batch with a matching learning rate, or sampling batch indices on the GPU instead of with numpy.
 - [hint] 0005 (weight the velocity loss by 2D visibility) scored 72.29, just short of the bar; try combining it with another change.
