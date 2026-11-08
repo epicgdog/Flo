@@ -41,6 +41,7 @@
 - [0043] Larger batch + linearly scaled LR (tune_optimizer) cut noise/overhead but gave no gain (-1.0 mm dev), so don't enlarge batch under a fixed budget.
 - [0044] Timestep sampling: 15% uniform + logit-normal mixture gave no gain (-0.2 mm) despite endpoint coverage for ODE; keep pure logit-normal mid-timestep focus.
 - [0045] Lesson: Expanding each block's MLP hidden dim to 2x width (~4.90M params, same depth) gave no gain, worsening dev by -0.9 mm, so wider MLPs don't improve per-block expressivity here.
+- [0046] Separate learned encoders for coordinates, mask, and frame to scale/fuse each modality vs flat linear mixing: rejected, no gain (-1.0 mm); keep the simpler flat input.
 ## Open hypotheses
 - [hint] The time budget is fixed, so more training steps per second lowers error: try bf16 autocast, a larger batch with a matching learning rate, or sampling batch indices on the GPU instead of with numpy.
 - [hint] 0005 (weight the velocity loss by 2D visibility) scored 72.29, just short of the bar; try combining it with another change.
