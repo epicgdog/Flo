@@ -22,6 +22,7 @@
 - [0022] Lesson: Retrying the unevaluated cosine schedule (tune_optimizer) gave no gain—dev worsened +2.1 mm and was rejected; it doesn't improve the final minimum under a fixed budget.
 - [0023] Uniform timestep sampling vs logit-normal: rejected (+2.9 mm worse); even endpoint coverage didn't improve ODE integration—keep mid-range timestep bias.
 - [0024] Gated linear units in residual blocks for multiplicative feature interactions gave no gain (-1.5 mm dev, rejected); plain GELU MLP suffices within the parameter limit.
+- [0025] Lesson: Appending frame-normalized keypoints for translation- and scale-invariant pose conditioning (alongside absolute coordinates) crashed training—avoid this conditioning change.
 ## Open hypotheses
 - [hint] The time budget is fixed, so more training steps per second lowers error: try bf16 autocast, a larger batch with a matching learning rate, or sampling batch indices on the GPU instead of with numpy.
 - [hint] 0005 (weight the velocity loss by 2D visibility) scored 72.29, just short of the bar; try combining it with another change.
