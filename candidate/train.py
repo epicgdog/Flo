@@ -52,7 +52,9 @@ class Net(nn.Module):
         h = self.inp(torch.cat([x, c, sinusoidal(t)], dim=1))
         for block in self.blocks:
             h = block(h, e)
-        return self.out(h)
+        x1 = self.out(h)
+        tt = t.reshape(-1, 1).clamp(0.0, 0.95)
+        return (x1 - x) / (1.0 - tt)
 
 
 def load(path):
