@@ -31,6 +31,7 @@
 - [0033] Lesson: Adding a bone-vector loss on the implied clean pose to enforce limb lengths/skeleton geometry gave no gain (+0.2 mm dev), so per-coordinate MSE alone is sufficient.
 - [0034] Horizontal-flip augmentation with left/right joint swaps gave no gain (+4.7 mm worse); mirror-symmetry regularization alone doesn't add useful pose diversity.
 - [0035] Reshaping keypoints to (-1,17,2) and subtracting frame position on the joint axis fixed the 17-vs-2 broadcast crash, but appending center/scale-normalized keypoints yielded NaN—validate normalization 
+- [0036] Halving batch size to 128 to double optimizer updates/sample worsened dev by +2.8 mm and was rejected—don't sacrifice batch size for update count under a fixed wall-clock budget.
 ## Open hypotheses
 - [hint] The time budget is fixed, so more training steps per second lowers error: try bf16 autocast, a larger batch with a matching learning rate, or sampling batch indices on the GPU instead of with numpy.
 - [hint] 0005 (weight the velocity loss by 2D visibility) scored 72.29, just short of the bar; try combining it with another change.
