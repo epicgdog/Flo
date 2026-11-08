@@ -119,7 +119,9 @@ def main():
         xt = (1 - t[:, None]) * x0 + t[:, None] * x1
         target = x1 - x0
         v = model(xt, t, c)
-        loss = ((v - target) ** 2).mean()
+        per = ((v - target) ** 2).mean(dim=1)
+        w = torch.clamp(10.0 * (1.0 - t) ** 2, max=1.0)
+        loss = (per * w).mean()
         opt.zero_grad()
         loss.backward()
         opt.step()
