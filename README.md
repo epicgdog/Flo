@@ -10,10 +10,11 @@ Each iteration of `loop.py`:
 
 1. **Route.** Pick a strategy from `config.yaml` (`tune_optimizer`, `timestep_sampling`, `architecture`, `conditioning`, `loss_and_target`, `regularization`, `fix_last_failure`).
 2. **Propose.** `agents/coder.py` asks the model for 4 candidate edits (search/replace blocks against the current `train.py`).
-3. **Rank.** `agents/snap.py` orders the candidates. Snap is currently disabled, so the original order is used.
-4. **Check.** `checker/check.py` runs a static check, trains the candidate in a subprocess with a 180 s budget, samples hypotheses with an Euler ODE solver, and computes metrics.
-5. **Gate.** `harness/gate.py` compares dev scores against the best so far, with a margin of 2 sigma. Held-out must not regress beyond 1 sigma.
-6. **Record.** Each attempt writes `history/<iter>/` (outcome, diff, logs, lesson). Accepted attempts are merged to `main` and tagged.
+3. **Rank.** `agents/snap.py` orders the candidates. Snap is off by default (`snap.enabled`); the original order is used otherwise.
+4. **Trial.** Every valid candidate gets a short dev run (`loop.trial_budget_s`, 60 s). Only the best trial gets a full run (`loop.trials`).
+5. **Check.** `checker/check.py` trains the candidate in a subprocess with a 180 s budget, samples hypotheses with an Euler ODE solver, and computes metrics. One checkpoint per seed is scored on both dev and held-out.
+6. **Gate.** `harness/gate.py` uses paired seed differences against the incumbent. Seed 0 must not regress, seed 1 is run, and a near miss gets a third seed (the incumbent also runs it, once, and is cached). Held-out is checked on the seed-0 checkpoint.
+7. **Record.** Each attempt writes `history/<iter>/` (outcome, diff, logs, lesson). Results are classed as pass, regression, inconclusive, heldout_regression or crash. Only passes and measured regressions become lessons that steer the coder. Accepted attempts are merged to `main` and tagged.
 
 Only `gate.accept()` moves `main`. Candidates live on `iter/<id>` branches until accepted.
 

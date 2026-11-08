@@ -2,6 +2,7 @@
 
 REPO is the git repo the functions act on. Tests point it at a temp repo.
 """
+import math
 import re
 import subprocess
 
@@ -27,12 +28,28 @@ def commit_candidate(iter_id: str, message: str) -> None:
     _git("commit", "-m", f"{iter_id}: {message}")
 
 
-def passes_dev(dev_scores: list[float], best_dev: float, cfg: dict) -> bool:
-    """Mean of dev_scores must beat best_dev by dev_margin_sigmas * sigma_dev.
-    Rule 1 passes [seed0]; rule 2 passes [seed0, seed1]."""
+def paired_threshold(n: int, cfg: dict) -> float:
+    """Mean paired difference (challenger - incumbent, same seed) that counts as a real change with n seeds.
+    Two independently trained models differ by about sqrt(2) * sigma_dev, so the mean of n paired differences
+    has spread sqrt(2) * sigma_dev / sqrt(n). The threshold is paired_margin_sigmas times that spread."""
     g = cfg["gate"]
-    margin = g["dev_margin_sigmas"] * g["sigma_dev"]
-    return sum(dev_scores) / len(dev_scores) < best_dev - margin
+    return g["paired_margin_sigmas"] * math.sqrt(2) * g["sigma_dev"] / math.sqrt(n)
+
+
+def classify_dev(diffs: list[float], cfg: dict) -> str:
+    """diffs[i] = challenger dev score - incumbent dev score on seed i. Negative means the challenger is better.
+    -> 'pass' (real gain), 'near_miss' (leaning better, keep for confirmation), 'inconclusive' (inside seed noise),
+    or 'regression' (real loss)."""
+    n = len(diffs)
+    m = sum(diffs) / n
+    t = paired_threshold(n, cfg)
+    if m <= -t:
+        return "pass"
+    if m <= -t / 2:
+        return "near_miss"
+    if m < t:
+        return "inconclusive"
+    return "regression"
 
 
 def passes_heldout(score: float, best_heldout: float, cfg: dict) -> bool:

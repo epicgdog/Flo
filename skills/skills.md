@@ -6,7 +6,7 @@
 - [0026] Lesson: Switch target to clean-pose prediction (converted internally to velocity) to weight final-pose accuracy over uniform velocity error; accepted, dev improved 4.3 mm.
 ## Failed ideas (do not retry without a new reason)
 - [0003] Increasing to width 640 with 5 blocks to stay under 5M params gave +1.8mm dev error with no gain — rejected; blind capacity adds overfit risk.
-- [0004] Lesson: Zeroing invisible 2D joints to block occluded noise while keeping mask signal gave no gain (+0.8mm dev) — rejected.
+- [0004] Zeroing invisible 2D joints: +0.8 mm dev, inside seed noise (inconclusive). Note: hidden joints are already zeroed in checker/datagen.py, so this step is an identity and the test did not check the idea.
 - [0005] Visibility-weighted velocity loss gave no gain (-0.2mm): occluded joints add little noise, visible joints already dominate.
 - [0006] Lesson: AdamW weight decay to curb pose overfitting gave no gain, dev +2.6 mm — rejected; avoid weight decay for this.
 - [0008] Raising AdamW to 1e-3 for this LayerNorm MLP gave only +1.9 mm dev gain in the fixed budget (rejected: no_gain), yielding no useful faster convergence.
@@ -22,8 +22,7 @@
 - [0020] Lesson: Adding small Gaussian noise only to visible 2D keypoints gave no gain (+3.2 mm dev worsening), so it doesn't regularize against detector localization error on unseen data.
 - [0022] Lesson: Retrying the unevaluated cosine schedule (tune_optimizer) gave no gain—dev worsened +2.1 mm and was rejected; it doesn't improve the final minimum under a fixed budget.
 - [0023] Uniform timestep sampling vs logit-normal: rejected (+2.9 mm worse); even endpoint coverage didn't improve ODE integration—keep mid-range timestep bias.
-- [0024] Gated linear units in residual blocks for multiplicative feature interactions gave no gain (-1.5 mm dev, rejected); plain GELU MLP suffices within the parameter limit.
-- [0025] Lesson: Appending frame-normalized keypoints for translation- and scale-invariant pose conditioning (alongside absolute coordinates) crashed training—avoid this conditioning change.
+- [0024] Gated linear units: -1.5 mm dev on seed 0 under the old gate (rejected then). Measured gain, not confirmed: retest with paired seeds before judging GLU blocks.
 - [0027] Random occlusion augmentation as regularization gave no robustness gain (+0.8 mm dev error), so simulating missing joints doesn't prevent over-reliance on visible keypoints.
 - [0028] Sampling batch indices on-GPU to eliminate per-step NumPy-to-device transfer gave only +0.3 mm (no gain): that transfer isn't the bottleneck for adding steps within budget.
 - [0029] Lesson: Longer EMA horizon (tune_optimizer) smoothed saved weights but yielded only +0.1 mm dev gain—rejected as no_gain; heavier EMA alone won't improve generalization.
@@ -31,3 +30,6 @@
 ## Open hypotheses
 - [hint] The time budget is fixed, so more training steps per second lowers error: try bf16 autocast, a larger batch with a matching learning rate, or sampling batch indices on the GPU instead of with numpy.
 - [hint] 0005 (weight the velocity loss by 2D visibility) scored 72.29, just short of the bar; try combining it with another change.
+
+## Untested (not evaluated; not a ban)
+- [0025] Not evaluated: the candidate crashed on a tensor broadcasting bug (kp (N,17,2) minus c[:,51:53,None] (N,2,1)). Idea untested; use c[:, None, 51:53].

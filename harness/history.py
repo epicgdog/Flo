@@ -51,16 +51,18 @@ def summaries(n: int, cfg: dict) -> list[dict]:
     out = []
     for o in [o for o in outcomes(cfg) if o.get("iter_id") != "0000"][-n:]:
         result = "accepted" if o.get("accepted") else f"rejected: {o.get('reason')}"
+        if o.get("cls") in ("inconclusive", "crash", "heldout_regression"):
+            result += f" ({o['cls']}: not a confirmed regression)"
         out.append({"id": o["iter_id"], "strategy": o.get("strategy"), "rationale": o.get("rationale"),
                     "dev": o.get("dev") if o.get("dev") is not None else o.get("reason"), "result": result})
     return out
 
 
 def best(cfg: dict) -> dict:
-    """{tag, dev, heldout, iter_id} of the current main: the last accepted attempt, else the v0 baseline."""
+    """{tag, dev, dev2, heldout, iter_id} of the current main: the last accepted attempt, else the v0 baseline."""
     chosen = {}
     for o in outcomes(cfg):
         if o.get("accepted"):
             chosen = o
-    return {"tag": chosen.get("tag"), "dev": chosen.get("dev"), "heldout": chosen.get("heldout"),
-            "iter_id": chosen.get("iter_id")}
+    return {"tag": chosen.get("tag"), "dev": chosen.get("dev"), "dev2": chosen.get("dev2"),
+            "heldout": chosen.get("heldout"), "iter_id": chosen.get("iter_id")}
