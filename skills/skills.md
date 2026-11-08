@@ -37,6 +37,7 @@
 - [0038] Deeper but narrower residual stack for flow field: no gain (-0.7mm Dev) at fixed params, so don't sacrifice width for depth.
 - [0039] Lesson: Fourier features for 2D coords (conditioning) gave no gain (+0.3 mm): raw normalized coordinates already give MLP sufficient spatial detail, so skip multi-scale encoding.
 - [0041] Small in-plane rotation augmentation (2D keypoints around person centre, 3D pose around camera axis) gave no gain (-0.3 mm); don't rely on it for rotational equivariance.
+- [0042] Tried deriving center/scale-normalized keypoints inside forward from the 54-dim condition (clamped) vs external expansion; fixed addmm crash but +0.1 mm, no gain—normalization alone won't help.
 ## Open hypotheses
 - [hint] The time budget is fixed, so more training steps per second lowers error: try bf16 autocast, a larger batch with a matching learning rate, or sampling batch indices on the GPU instead of with numpy.
 - [hint] 0005 (weight the velocity loss by 2D visibility) scored 72.29, just short of the bar; try combining it with another change.
