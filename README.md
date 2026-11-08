@@ -4,6 +4,7 @@ An autonomous research loop that improves a 3D human-pose lifter for a drone cam
 
 A conditional flow-matching model maps 2D body keypoints seen from a simulated DJI Tello-style camera to a 3D pose (17 COCO joints, meters). An LLM proposes edits to `candidate/train.py`. A checker trains each candidate for a fixed time budget and scores it on held-out data. A git-based gate decides whether the change becomes the new `main`.
 
+demo: https://youtu.be/Vzut-d8jDBk
 ## How it works
 
 Each iteration of `loop.py`:
