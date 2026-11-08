@@ -39,6 +39,7 @@
 - [0041] Small in-plane rotation augmentation (2D keypoints around person centre, 3D pose around camera axis) gave no gain (-0.3 mm); don't rely on it for rotational equivariance.
 - [0042] Tried deriving center/scale-normalized keypoints inside forward from the 54-dim condition (clamped) vs external expansion; fixed addmm crash but +0.1 mm, no gain—normalization alone won't help.
 - [0043] Larger batch + linearly scaled LR (tune_optimizer) cut noise/overhead but gave no gain (-1.0 mm dev), so don't enlarge batch under a fixed budget.
+- [0044] Timestep sampling: 15% uniform + logit-normal mixture gave no gain (-0.2 mm) despite endpoint coverage for ODE; keep pure logit-normal mid-timestep focus.
 ## Open hypotheses
 - [hint] The time budget is fixed, so more training steps per second lowers error: try bf16 autocast, a larger batch with a matching learning rate, or sampling batch indices on the GPU instead of with numpy.
 - [hint] 0005 (weight the velocity loss by 2D visibility) scored 72.29, just short of the bar; try combining it with another change.
