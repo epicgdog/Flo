@@ -70,7 +70,7 @@ function Header({ s, error }: { s: Summary | null; error: string | null }) {
   const d = vsBase(best.dev, s?.baseline.dev), h = vsBase(best.heldout, s?.baseline.heldout)
   return (
     <>
-      <h1>Drone Pose RSI harness <span className="status" style={{ color }}>● {status}</span>
+      <h1>Flo <span className="status" style={{ color }}>● {status}</span>
         {error && s && <span className="small error">refresh failed: {error}</span>}</h1>
       <div className="metrics">
         <Metric label="Time" value={`${el.toFixed(0)} min elapsed`} delta={`${rem.toFixed(0)} min remaining`} />
