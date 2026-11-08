@@ -20,3 +20,5 @@
 - [0019] Huber velocity loss gave no gain (-0.9 mm, rejected): down-weighting rare extreme pose/occlusion outliers doesn't help; MSE's smooth gradients for typical errors suffice.
 - [0020] Lesson: Adding small Gaussian noise only to visible 2D keypoints gave no gain (+3.2 mm dev worsening), so it doesn't regularize against detector localization error on unseen data.
 ## Open hypotheses
+- [hint] The time budget is fixed, so more training steps per second lowers error: try bf16 autocast, a larger batch with a matching learning rate, or sampling batch indices on the GPU instead of with numpy.
+- [hint] 0005 (weight the velocity loss by 2D visibility) scored 72.29, just short of the bar; try combining it with another change.
